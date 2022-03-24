@@ -30,25 +30,34 @@ void bench_conv16_run() {
   C = (uint16_t *)bench_alloc(sizeof(uint16_t) * m * m);
   kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k * k);
 
+  kernel[0] = 10;
+  kernel[1] = -10;
+  kernel[2] = 10;
+  kernel[3] = -10;
+  kernel[4] = 10;
+  kernel[5] = -10;
+  kernel[6] = 10;
+  kernel[7] = -10;
+  kernel[8] = 10;
   printf("\n");
   for (int i=0; i<k*k; i++){
-    kernel[i] = bench_rand() & 0xf;
+    //kernel[i] = bench_rand() & 0xff;
     printf("%d ", kernel[i]);
   }
   printf("\n");
 
-  LoadV_Width((uint64_t)&vwidth, 0);
+  LoadV_Width((uint64_t)&vwidth);
 
-  LoadV_D((uint64_t)(kernel), k, 0, 0x10);
-  LoadV_D((uint64_t)(kernel+3), k, 0, 0x11);
-  LoadV_D((uint64_t)(kernel+6), k, 0, 0x12);
+  LoadV_D_Kernel((uint64_t)(kernel), k, 0, 0);
+  LoadV_D_Kernel((uint64_t)(kernel+3), k, 1, 0);
+  LoadV_D_Kernel((uint64_t)(kernel+6), k, 2, 0);
 
   uint16_t *col_ptr;
   for (int i=0; i<m; i++) {
     col_ptr = &A[0][i];
-    LoadV_D((uint64_t)(col_ptr), k, 0, 0x00);
-    LoadV_D((uint64_t)(col_ptr+N), k, 0, 0x01);
-    LoadV_D((uint64_t)(col_ptr+2*N), k, 0, 0x02);
+    LoadV_D_Main((uint64_t)(col_ptr), k, 0, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+N), k, 1, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+2*N), k, 2, 0);
     B[0 * m + i] = Conv(k);
 
     // std res
@@ -58,7 +67,15 @@ void bench_conv16_run() {
         tmp_res += A[0 + sj][i + si] * kernel[si * k + sj];
       }
     }
-    C[0 * m + i] = tmp_res;
+    if (tmp_res < 0) {
+      C[0 * m + i] = 0;
+    }
+    else if (tmp_res > 0xffff) {
+      C[0 * m + i] = 0xffff;
+    }
+    else {
+      C[0 * m + i] = tmp_res;
+    }
 
     if (B[0 * m + i] != C[0 * m + i]) {
       printf("conv error: i=%d, j=0, conv_res=%d, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], C[0 * m + i], tmp_res);
@@ -68,6 +85,9 @@ void bench_conv16_run() {
         }
       }
       printf("\n");
+    }
+    else {
+      printf("ok: i=%d, j=0, std_res=%d, tmp_res=%d\n", i, C[0 * m + i], tmp_res);
     }
 
     col_ptr += 3*N;
@@ -82,7 +102,15 @@ void bench_conv16_run() {
           tmp_res += A[j + sj][i + si] * kernel[si * k + sj];
         }
       }
-      C[j * m + i] = tmp_res;
+      if (tmp_res < 0) {
+        C[j * m + i] = 0;
+      }
+      else if (tmp_res > 0xffff) {
+        C[j * m + i] = 0xffff;
+      }
+      else {
+        C[j * m + i] = tmp_res;
+      }
 
       if (B[j * m + i] != C[j * m + i]) {
         printf("conv error: i=%d, j=%d, conv_res=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], C[j * m + i], tmp_res);
@@ -92,6 +120,9 @@ void bench_conv16_run() {
           }
         }
         printf("\n");
+      }
+      else {
+        printf("ok: i=%d, j=%d, std_res=%d, tmp_res=%d\n", i, j, C[j * m + i], tmp_res);
       }
 
       col_ptr += N;
