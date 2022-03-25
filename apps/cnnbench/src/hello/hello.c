@@ -8,17 +8,17 @@ void bench_hello_prepare() {
   n = setting->size;
 }
 
-static void myhello(int n) {
+static void myhello() {
   if (n == 100){
     printf("\nhello world!\n");
   }
   else {
-    printf("\nhello error\n");
+    printf("\nhello error: %d\n", n);
   }
 }
 
 void bench_hello_run() {
-  myhello(n);
+  myhello();
 }
 
 int bench_hello_validate() {
