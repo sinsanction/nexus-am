@@ -17,17 +17,28 @@ extern "C" {
 //                  size |  heap  |  checksum
 #define HELLO   {     100,   1 KB,  0x00000000}
 #define CONV_16 {      20, 128 KB,  0x00000001}
-#define CONV_8  {      20,   1 KB,  0x00000002}
-#define CONV_4  {      20,   1 KB,  0x00000003}
-#define CONV_2  {      20,   1 KB,  0x00000004}
+#define CONV_8  {      20,  64 KB,  0x00000002}
+#define CONV_4  {      20,  64 KB,  0x00000003}
+#define CONV_2  {      20,  32 KB,  0x00000004}
+
 #define POOL_16 {      20, 128 KB,  0x00000011}
+#define POOL_8  {      20,  64 KB,  0x00000012}
+#define POOL_4  {      20,  64 KB,  0x00000013}
+#define POOL_2  {      20,  32 KB,  0x00000014}
+
 #define ACT_16  {      20, 128 KB,  0x00000021}
+#define ACT_8   {      20,  64 KB,  0x00000022}
+#define ACT_4   {      20,  64 KB,  0x00000023}
+#define ACT_2   {      20,  32 KB,  0x00000024}
 
 #define BENCHMARK_LIST(def) \
   def(hello,  "hello",  HELLO,   "hello world") \
   def(conv16, "conv16", CONV_16, "CNN Conv 16b") \
   def(pool16, "pool16", POOL_16, "CNN Pool 16b") \
-  def(act16,  "act16",  ACT_16,  "CNN Act 16b")
+  def(act16,  "act16",  ACT_16,  "CNN Act 16b") \
+  def(conv8, "conv8", CONV_8, "CNN Conv 8b") \
+  def(pool8, "pool8", POOL_8, "CNN Pool 8b") \
+  def(act8,  "act8",  ACT_8,  "CNN Act 8b")
 
 // Each benchmark will run REPEAT times
 
