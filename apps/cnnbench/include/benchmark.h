@@ -38,7 +38,13 @@ extern "C" {
   def(act16,  "act16",  ACT_16,  "CNN Act 16b") \
   def(conv8, "conv8", CONV_8, "CNN Conv 8b") \
   def(pool8, "pool8", POOL_8, "CNN Pool 8b") \
-  def(act8,  "act8",  ACT_8,  "CNN Act 8b")
+  def(act8,  "act8",  ACT_8,  "CNN Act 8b") \
+  def(conv4, "conv4", CONV_4, "CNN Conv 4b") \
+  def(pool4, "pool4", POOL_4, "CNN Pool 4b") \
+  def(act4,  "act4",  ACT_4,  "CNN Act 4b") \
+  def(conv2, "conv2", CONV_2, "CNN Conv 2b") \
+  def(pool2, "pool2", POOL_2, "CNN Pool 2b") \
+  def(act2,  "act2",  ACT_2,  "CNN Act 2b")
 
 // Each benchmark will run REPEAT times
 

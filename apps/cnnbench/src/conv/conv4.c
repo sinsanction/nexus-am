@@ -4,9 +4,10 @@
 #define N 20
 #define S 1
 
-static uint8_t A[N][N];
+static uint8_t *A;
 static uint64_t vwidth;
 static int test_pass;
+static int a_size;
 
 inline int round_up_div(int a, int b) {
   int div = a / b;
@@ -19,28 +20,35 @@ inline int round_up_div(int a, int b) {
   }
 }
 
-inline int8_t get_kernel_int4(int8_t *kernel, int i) {
+inline uint8_t get_main_uint4(uint8_t *data, int i) {
   int j = i / 2;
   int r = i % 2;
-  int8_t kernel_i = (kernel[j] >> (r * 4)) & 0xf;
-  if (kernel_i & 0x8) {
-    kernel_i = kernel_i | 0xf0;
+  uint8_t data_i = (data[j] >> (r * 4)) & 0xf;
+  return data_i;
+}
+
+inline int8_t get_kernel_int2(int8_t *kernel, int i) {
+  int j = i / 4;
+  int r = i % 4;
+  int8_t kernel_i = (kernel[j] >> (r * 2)) & 0x3;
+  if (kernel_i & 0x2) {
+    kernel_i = kernel_i | 0xfc;
   }
   return kernel_i;
 }
 
-void bench_conv8_prepare() {
+void bench_conv4_prepare() {
   bench_srand(1);
-  vwidth = 0x4444444444444444;
-  for (int i=0; i<N; i++) {
-    for (int j=0; j<N; j++) {
-      A[i][j] = bench_rand() & 0xff;
-    }
+  vwidth = 0x2222222222222222;
+  a_size = round_up_div(N * N, 2);
+  A = (uint8_t *)bench_alloc(sizeof(uint8_t) * a_size);
+  for (int i=0; i<a_size; i++) {
+    A[i] = bench_rand() & 0xff;
   }
   test_pass = 1;
 }
 
-void bench_conv8_run() {
+void bench_conv4_run() {
   int k;              //kernel size
   int m;              //output size
   uint8_t *B;         //cnn output
@@ -53,7 +61,7 @@ void bench_conv8_run() {
     m = (N - k) / S + 1;
     B = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
     C = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
-    k_size = round_up_div(k * k, 2);
+    k_size = round_up_div(k * k, 4);
     kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k_size);
     pass = 1;
 
@@ -63,21 +71,21 @@ void bench_conv8_run() {
     }
     printf("  k_size: %d\n", k_size);
     for (int i=0; i<k*k; i++) {
-      printf("  %d", get_kernel_int4(kernel, i));
+      printf("  %d", get_kernel_int2(kernel, i));
     }
     printf("\n");
 
     LoadV_Width((uint64_t)&vwidth);
 
-    uint64_t kernel_ptr = ((uint64_t)kernel) << 1;
+    uint64_t kernel_ptr = ((uint64_t)kernel) << 2;
     for (int i=0; i<k; i++) {
       LoadV_D_Kernel(kernel_ptr, k, i, 0);
       kernel_ptr += k;
     }
 
-    uint8_t *col_ptr;
+    uint64_t col_ptr;
     for (int i=0; i<m; i++) {
-      col_ptr = &A[0][i];
+      col_ptr = (((uint64_t)A) << 1) + i;
       for (int l=0; l<k; l++) {
         LoadV_D_Main((uint64_t)(col_ptr), k, l, 0);
         col_ptr += N;
@@ -88,23 +96,23 @@ void bench_conv8_run() {
       int32_t tmp_res = 0;
       for (int si=0; si<k; si++) {
         for (int sj=0; sj<k; sj++) {
-          tmp_res += A[0 + sj][i + si] * get_kernel_int4(kernel, si * k + sj);
+          tmp_res += get_main_uint4(A, (0 + sj) * N + (i + si)) * get_kernel_int2(kernel, si * k + sj);
         }
       }
-      C[0 * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xff) ? 0xff : tmp_res;
+      C[0 * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xf) ? 0xf : tmp_res;
 
       if (B[0 * m + i] != C[0 * m + i]) {
         printf("  conv error: i=%d, j=0, conv_res=%d, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], C[0 * m + i], tmp_res);
         for (int si=0; si<k; si++) {
           for (int sj=0; sj<k; sj++) {
-            printf("  %d", A[0 + sj][i + si]);
+            printf("  %d", get_main_uint4(A, (0 + sj) * N + (i + si)));
           }
         }
         printf("\n");
         pass = 0;
       }
       else {
-        ;//printf("  ok: i=%d, j=0, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], tmp_res);
+        printf("  ok: i=%d, j=0, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], tmp_res);
       }
 
       for (int j=1; j<m; j++) {
@@ -115,23 +123,23 @@ void bench_conv8_run() {
         int32_t tmp_res = 0;
         for (int si=0; si<k; si++) {
           for (int sj=0; sj<k; sj++) {
-            tmp_res += A[j + sj][i + si] * get_kernel_int4(kernel, si * k + sj);
+            tmp_res += get_main_uint4(A, (j + sj) * N + (i + si)) * get_kernel_int2(kernel, si * k + sj);
           }
         }
-        C[j * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xff) ? 0xff : tmp_res;
+        C[j * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xf) ? 0xf : tmp_res;
 
         if (B[j * m + i] != C[j * m + i]) {
           printf("  conv error: i=%d, j=%d, conv_res=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], C[j * m + i], tmp_res);
           for (int si=0; si<k; si++) {
             for (int sj=0; sj<k; sj++) {
-              printf("  %d", A[j + sj][i + si]);
+              printf("  %d", get_main_uint4(A, (j + sj) * N + (i + si)));
             }
           }
           printf("\n");
           pass = 0;
         }
         else {
-          ;//printf("  ok: i=%d, j=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], tmp_res);
+          printf("  ok: i=%d, j=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], tmp_res);
         }
 
         col_ptr += N;
@@ -151,6 +159,7 @@ void bench_conv8_run() {
   }
 }
 
-int bench_conv8_validate() {
-  return (setting->checksum == 0x00000002) && test_pass;
+int bench_conv4_validate() {
+  bench_free(A);
+  return (setting->checksum == 0x00000003) && test_pass;
 }
