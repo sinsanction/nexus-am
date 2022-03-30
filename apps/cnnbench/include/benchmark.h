@@ -15,7 +15,6 @@ extern "C" {
 #define REPEAT  1
 
 //                  size |  heap  |  checksum
-#define HELLO   {     100,   1 KB,  0x00000000}
 #define CONV_16 {      20, 128 KB,  0x00000001}
 #define CONV_8  {      20,  64 KB,  0x00000002}
 #define CONV_4  {      20,  64 KB,  0x00000003}
@@ -32,7 +31,6 @@ extern "C" {
 #define ACT_2   {      20,  32 KB,  0x00000024}
 
 #define BENCHMARK_LIST(def) \
-  def(hello,  "hello",  HELLO,   "hello world") \
   def(conv16, "conv16", CONV_16, "CNN Conv 16b") \
   def(pool16, "pool16", POOL_16, "CNN Pool 16b") \
   def(act16,  "act16",  ACT_16,  "CNN Act 16b") \

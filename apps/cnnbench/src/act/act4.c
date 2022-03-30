@@ -90,7 +90,7 @@ void bench_act4_run() {
       pass = 0;
     }
     else {
-      printf("  ok: i=%d, std_res=%lx, tmp_res=%lx\n", i, b_ptr[i], tmp_res);
+      ;//printf("  ok: i=%d, std_res=%lx, tmp_res=%lx\n", i, b_ptr[i], tmp_res);
     }
   }
   if (pass == 1) {
@@ -126,7 +126,7 @@ void bench_act4_run() {
       pass = 0;
     }
     else {
-      printf("  ok: i=%d, std_res=%lx, tmp_res=%lx\n", i, b_ptr[i], tmp_res);
+      ;//printf("  ok: i=%d, std_res=%lx, tmp_res=%lx\n", i, b_ptr[i], tmp_res);
       /*for (int sj=0; sj<num; sj++) {
         printf("  %d(%x)", a_ptr[sj], a_ptr[sj]);
       }

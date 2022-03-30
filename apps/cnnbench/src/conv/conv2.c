@@ -109,7 +109,7 @@ void bench_conv2_run() {
         pass = 0;
       }
       else {
-        printf("  ok: i=%d, j=0, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], tmp_res);
+        ;//printf("  ok: i=%d, j=0, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], tmp_res);
       }
 
       for (int j=1; j<m; j++) {
@@ -136,7 +136,7 @@ void bench_conv2_run() {
           pass = 0;
         }
         else {
-          printf("  ok: i=%d, j=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], tmp_res);
+          ;//printf("  ok: i=%d, j=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], tmp_res);
         }
 
         col_ptr += N;

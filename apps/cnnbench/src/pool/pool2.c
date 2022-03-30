@@ -99,7 +99,7 @@ void bench_pool2_run() {
         pass = 0;
       }
       else {
-        printf("  ok: i=%d, j=0, std_max_res=%d, std_avg_res=%d, tmp_res_avg=%d\n", i, Bm[0 * m + i], Ba[0 * m + i], tmp_res_avg);
+        ;//printf("  ok: i=%d, j=0, std_max_res=%d, std_avg_res=%d, tmp_res_avg=%d\n", i, Bm[0 * m + i], Ba[0 * m + i], tmp_res_avg);
       }
 
       for (int j=1; j<m; j++) {
@@ -133,7 +133,7 @@ void bench_pool2_run() {
           pass = 0;
         }
         else {
-          printf("  ok: i=%d, j=%d, std_max_res=%d, std_avg_res=%d, tmp_res_avg=%d\n", i, j, Bm[j * m + i], Ba[j * m + i], tmp_res_avg);
+          ;//printf("  ok: i=%d, j=%d, std_max_res=%d, std_avg_res=%d, tmp_res_avg=%d\n", i, j, Bm[j * m + i], Ba[j * m + i], tmp_res_avg);
         }
 
         col_ptr += N;
