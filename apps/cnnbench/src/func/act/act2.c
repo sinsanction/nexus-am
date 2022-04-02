@@ -1,7 +1,7 @@
 #include <benchmark.h>
 #include "cnn.h"
 
-#define N 20
+#define N 100
 #define S 1
 
 static uint8_t *A;
@@ -24,17 +24,17 @@ inline int round_up_div(int a, int b) {
   }
 }
 
-inline uint8_t get_main_uint4(uint8_t *data, int i) {
-  int j = i / 2;
-  int r = i % 2;
-  uint8_t data_i = (data[j] >> (r * 4)) & 0xf;
+inline uint8_t get_main_uint2(uint8_t *data, int i) {
+  int j = i / 4;
+  int r = i % 4;
+  uint8_t data_i = (data[j] >> (r * 2)) & 0x3;
   return data_i;
 }
 
-void bench_act4_prepare() {
+void bench_act2_prepare() {
   bench_srand(1);
-  vwidth = 0x2222222222222222;
-  a_size = round_up_div(N * N, 2);
+  vwidth = 0x1111111111111111;
+  a_size = round_up_div(N * N, 4);
   A = (uint8_t *)bench_alloc(sizeof(uint8_t) * a_size);
   for (int i=0; i<a_size; i++) {
     A[i] = bench_rand() & 0xff;
@@ -42,7 +42,7 @@ void bench_act4_prepare() {
   test_pass = 1;
 }
 
-void bench_act4_run() {
+void bench_act2_run() {
   int m;             //output size
   uint8_t *B;        //act output
   uint8_t *C;        //std output
@@ -58,7 +58,7 @@ void bench_act4_run() {
 
   LoadV_Width((uint64_t)&vwidth);
 
-  int num = sizeof(uint64_t) / sizeof(uint8_t) * 2;
+  int num = sizeof(uint64_t) / sizeof(uint8_t) * 4;
   int size = round_up_div((m * m), num);
   uint64_t zero;
   uint64_t *a_ptr;
@@ -77,14 +77,14 @@ void bench_act4_run() {
 
     uint64_t tmp_res = 0;
     for (int j=0; j<num; j++) {
-      tmp_res |= (uint64_t)max(get_main_uint4(A, i * num + j), 0x0) << (j * 4);
+      tmp_res |= (uint64_t)max(get_main_uint2(A, i * num + j), 0x0) << (j * 2);
     }
     c_ptr[i] = tmp_res;
 
     if (b_ptr[i] != c_ptr[i]) {
       printf("  act error: i=%d, act_res=%lx, std_res=%lx, tmp_res=%lx\n", i, b_ptr[i], c_ptr[i], tmp_res);
       for (int sj=0; sj<num; sj++) {
-        printf("  %d(%x)", get_main_uint4(A, i * num + sj), get_main_uint4(A, i * num + sj));
+        printf("  %d(%x)", get_main_uint2(A, i * num + sj), get_main_uint2(A, i * num + sj));
       }
       printf("\n");
       pass = 0;
@@ -101,9 +101,9 @@ void bench_act4_run() {
     test_pass = 0;
   }
 
-  printf("\nzero=8 begin: \n");
+  printf("\nzero=2 begin: \n");
 
-  zero = 0x8888888888888888;
+  zero = 0xaaaaaaaaaaaaaaaa;
   a_ptr = (uint64_t *)A;
   b_ptr = (uint64_t *)B;
   c_ptr = (uint64_t *)C;
@@ -113,14 +113,14 @@ void bench_act4_run() {
 
     uint64_t tmp_res = 0;
     for (int j=0; j<num; j++) {
-      tmp_res |= (uint64_t)max(get_main_uint4(A, i * num + j), 0x8) << (j * 4);
+      tmp_res |= (uint64_t)max(get_main_uint2(A, i * num + j), 0x2) << (j * 2);
     }
     c_ptr[i] = tmp_res;
 
     if (b_ptr[i] != c_ptr[i]) {
       printf("  act error: i=%d, act_res=%lx, std_res=%lx, tmp_res=%lx\n", i, b_ptr[i], c_ptr[i], tmp_res);
       for (int sj=0; sj<num; sj++) {
-        printf("  %d(%x)", get_main_uint4(A, i * num + sj), get_main_uint4(A, i * num + sj));
+        printf("  %d(%x)", get_main_uint2(A, i * num + sj), get_main_uint2(A, i * num + sj));
       }
       printf("\n");
       pass = 0;
@@ -134,10 +134,10 @@ void bench_act4_run() {
     }
   }
   if (pass == 1) {
-    printf("zero=8 end: pass!!!\n");
+    printf("zero=2 end: pass!!!\n");
   }
   else {
-    printf("zero=8 end: fail\n");
+    printf("zero=2 end: fail\n");
     test_pass = 0;
   }
 
@@ -145,7 +145,7 @@ void bench_act4_run() {
   bench_free(C);
 }
 
-int bench_act4_validate() {
+int bench_act2_validate() {
   bench_free(A);
-  return (setting->checksum == 0x00000023) && test_pass;
+  return (setting->checksum == 0x00000024) && test_pass;
 }

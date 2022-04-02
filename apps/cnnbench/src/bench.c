@@ -18,8 +18,14 @@ static char *hbrk;
     .desc = _desc, \
     .settings = _setting, },
 
-Benchmark benchmarks[] = {
+Benchmark benchmarks_func[] = {
   BENCHMARK_LIST(ENTRY)
+};
+Benchmark benchmarks_base[] = {
+  BENCHMARK_BASE_LIST(ENTRY)
+};
+Benchmark benchmarks_perf[] = {
+  BENCHMARK_PERF_LIST(ENTRY)
 };
 
 // Running a benchmark
@@ -61,10 +67,11 @@ int main(const char *args) {
   int setting_id = -1;
 
   if      (strcmp(setting_name, "testfunc" ) == 0) setting_id = 0;
-  else if (strcmp(setting_name, "testperf") == 0) setting_id = 1;
+  else if (strcmp(setting_name, "testbase") == 0) setting_id = 1;
+  else if (strcmp(setting_name, "testperf") == 0) setting_id = 2;
   else {
     printf("Invalid mainargs: \"%s\"; "
-           "must be in {testfunc, testperf}\n", setting_name);
+           "must be in {testfunc, testbase, testperf}\n", setting_name);
     _halt(1);
   }
 
@@ -74,9 +81,14 @@ int main(const char *args) {
 
   int pass = 1;
   uint32_t t0 = uptime();
+  int bench_length;
+  Benchmark *test_bench;
+  if      (setting_id == 1) { bench_length = LENGTH(benchmarks_base); test_bench = benchmarks_base; }
+  else if (setting_id == 2) { bench_length = LENGTH(benchmarks_perf); test_bench = benchmarks_perf; }
+  else { bench_length = LENGTH(benchmarks_func); test_bench = benchmarks_func; }
 
-  for (int i = 0; i < LENGTH(benchmarks); i ++) {
-    Benchmark *bench = &benchmarks[i];
+  for (int i = 0; i < bench_length; i ++) {
+    Benchmark *bench = &test_bench[i];
     current = bench;
     setting = &bench->settings;
     const char *msg = bench_check(bench);

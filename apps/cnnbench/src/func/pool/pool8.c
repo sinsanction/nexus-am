@@ -1,48 +1,29 @@
 #include <benchmark.h>
 #include "cnn.h"
 
-#define N 20
+#define N 100
 #define S 1
 
-static uint8_t *A;
+static uint8_t A[N][N];
 static uint64_t vwidth;
 static int test_pass;
-static int a_size;
 
 inline uint8_t max(uint8_t a, uint8_t b) {
   return (a >= b) ? a : b;
 }
 
-inline int round_up_div(int a, int b) {
-  int div = a / b;
-  int rem = a % b;
-  if (rem == 0) {
-    return div;
-  }
-  else {
-    return div + 1;
-  }
-}
-
-inline uint8_t get_main_uint2(uint8_t *data, int i) {
-  int j = i / 4;
-  int r = i % 4;
-  uint8_t data_i = (data[j] >> (r * 2)) & 0x3;
-  return data_i;
-}
-
-void bench_pool2_prepare() {
+void bench_pool8_prepare() {
   bench_srand(1);
-  vwidth = 0x1111111111111111;
-  a_size = round_up_div(N * N, 4);
-  A = (uint8_t *)bench_alloc(sizeof(uint8_t) * a_size);
-  for (int i=0; i<a_size; i++) {
-    A[i] = bench_rand() & 0xff;
+  vwidth = 0x4444444444444444;
+  for (int i=0; i<N; i++) {
+    for (int j=0; j<N; j++) {
+      A[i][j] = bench_rand() & 0xff;
+    }
   }
   test_pass = 1;
 }
 
-void bench_pool2_run() {
+void bench_pool8_run() {
   int k;              //kernel size
   int m;              //output size
   uint8_t *Bm;        //pool max output
@@ -63,9 +44,9 @@ void bench_pool2_run() {
 
     LoadV_Width((uint64_t)&vwidth);
 
-    uint64_t col_ptr;
+    uint8_t *col_ptr;
     for (int i=0; i<m; i++) {
-      col_ptr = (((uint64_t)A) << 2) + i;
+      col_ptr = &A[0][i];
       for (int l=0; l<k; l++) {
         LoadV_D_Main((uint64_t)(col_ptr), k, l, 0);
         col_ptr += N;
@@ -78,8 +59,8 @@ void bench_pool2_run() {
       uint32_t tmp_res_avg = 0;
       for (int si=0; si<k; si++) {
         for (int sj=0; sj<k; sj++) {
-          tmp_res_max = max(tmp_res_max, get_main_uint2(A, (0 + sj) * N + (i + si)));
-          tmp_res_avg += get_main_uint2(A, (0 + sj) * N + (i + si));
+          tmp_res_max = max(tmp_res_max, A[0 + sj][i + si]);
+          tmp_res_avg += A[0 + sj][i + si];
         }
       }
       Cm[0 * m + i] = tmp_res_max;
@@ -92,7 +73,7 @@ void bench_pool2_run() {
         printf("  pool error: i=%d, j=0, pool_max_res=%d, std_max_res=%d, pool_avg_res=%d, std_avg_res=%d, tmp_res_avg=%d\n", i, Bm[0 * m + i], Cm[0 * m + i], Ba[0 * m + i], Ca[0 * m + i], tmp_res_avg);
         for (int si=0; si<k; si++) {
           for (int sj=0; sj<k; sj++) {
-            printf("  %d", get_main_uint2(A, (0 + sj) * N + (i + si)));
+            printf("  %d", A[0 + sj][i + si]);
           }
         }
         printf("\n");
@@ -112,8 +93,8 @@ void bench_pool2_run() {
         uint32_t tmp_res_avg = 0;
         for (int si=0; si<k; si++) {
           for (int sj=0; sj<k; sj++) {
-            tmp_res_max = max(tmp_res_max, get_main_uint2(A, (j + sj) * N + (i + si)));
-            tmp_res_avg += get_main_uint2(A, (j + sj) * N + (i + si));
+            tmp_res_max = max(tmp_res_max, A[j + sj][i + si]);
+            tmp_res_avg += A[j + sj][i + si];
           }
         }
         Cm[j * m + i] = tmp_res_max;
@@ -126,7 +107,7 @@ void bench_pool2_run() {
           printf("  pool error: i=%d, j=%d, pool_max_res=%d, std_max_res=%d, pool_avg_res=%d, std_avg_res=%d, tmp_res_avg=%d\n", i, j, Bm[j * m + i], Cm[j * m + i], Ba[j * m + i], Ca[j * m + i], tmp_res_avg);
           for (int si=0; si<k; si++) {
             for (int sj=0; sj<k; sj++) {
-              printf("  %d", get_main_uint2(A, (j + sj) * N + (i + si)));
+              printf("  %d", A[j + sj][i + si]);
             }
           }
           printf("\n");
@@ -154,7 +135,6 @@ void bench_pool2_run() {
   }
 }
 
-int bench_pool2_validate() {
-  bench_free(A);
-  return (setting->checksum == 0x00000014) && test_pass;
+int bench_pool8_validate() {
+  return (setting->checksum == 0x00000012) && test_pass;
 }
