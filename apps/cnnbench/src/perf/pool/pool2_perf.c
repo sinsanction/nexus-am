@@ -37,34 +37,36 @@ void bench_pool2_perf_run() {
   uint8_t *Bm;        //pool max output
   uint8_t *Ba;        //pool avg output
 
-  for (k=1; k<=5; k++) {
-    m = (N - k) / S + 1;
-    Bm = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
-    Ba = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
+  k = 5;
+  m = (N - k) / S + 1;
+  Bm = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
+  Ba = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
 
-    LoadV_Width((uint64_t)&vwidth);
+  LoadV_Width((uint64_t)&vwidth);
 
-    uint64_t col_ptr;
-    for (int i=0; i<m; i++) {
-      col_ptr = (((uint64_t)A) << 2) + i;
-      for (int l=0; l<k; l++) {
-        LoadV_D_Main((uint64_t)(col_ptr), k, l, 0);
-        col_ptr += N;
-      }
-      Bm[0 * m + i] = Pool_Max(k);
-      Ba[0 * m + i] = Pool_Avg(k);
+  uint64_t col_ptr;
+  for (int i=0; i<m; i++) {
+    col_ptr = (((uint64_t)A) << 2) + i;
+    LoadV_D_Main((uint64_t)(col_ptr), k, 0, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+N), k, 1, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+2*N), k, 2, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+3*N), k, 3, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+4*N), k, 4, 0);
+    col_ptr += 5*N;
+    Bm[0 * m + i] = Pool_Max(k);
+    Ba[0 * m + i] = Pool_Avg(k);
 
-      for (int j=1; j<m; j++) {
-        LoadV_P((uint64_t)(col_ptr), k, 0);
-        Bm[j * m + i] = Pool_Max(k);
-        Ba[j * m + i] = Pool_Avg(k);
-        col_ptr += N;
-      }
+    for (int j=1; j<m; j++) {
+      LoadV_P((uint64_t)(col_ptr), k, 0);
+      Bm[j * m + i] = Pool_Max(k);
+      Ba[j * m + i] = Pool_Avg(k);
+      col_ptr += N;
     }
-
-    bench_free(Bm);
-    bench_free(Ba);
   }
+
+  bench_free(Bm);
+  bench_free(Ba);
+
 }
 
 int bench_pool2_perf_validate() {

@@ -25,42 +25,45 @@ void bench_conv16_perf_run() {
   uint16_t *B;        //cnn output
   int8_t *kernel;     //kernel
 
-  for (k=1; k<=5; k++) {
-    m = (N - k) / S + 1;
-    B = (uint16_t *)bench_alloc(sizeof(uint16_t) * m * m);
-    kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k * k);
+  k = 5;
+  m = (N - k) / S + 1;
+  B = (uint16_t *)bench_alloc(sizeof(uint16_t) * m * m);
+  kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k * k);
 
-    for (int i=0; i<k*k; i++) {
-      kernel[i] = bench_rand() & 0xff;
-    }
-
-    LoadV_Width((uint64_t)&vwidth);
-
-    int8_t *kernel_ptr = kernel;
-    for (int i=0; i<k; i++) {
-      LoadV_D_Kernel((uint64_t)(kernel_ptr), k, i, 0);
-      kernel_ptr += k;
-    }
-
-    uint16_t *col_ptr;
-    for (int i=0; i<m; i++) {
-      col_ptr = &A[0][i];
-      for (int l=0; l<k; l++) {
-        LoadV_D_Main((uint64_t)(col_ptr), k, l, 0);
-        col_ptr += N;
-      }
-      B[0 * m + i] = Conv(k);
-
-      for (int j=1; j<m; j++) {
-        LoadV_P((uint64_t)(col_ptr), k, 0);
-        B[j * m + i] = Conv(k);
-        col_ptr += N;
-      }
-    }
-
-    bench_free(B);
-    bench_free(kernel);
+  for (int i=0; i<k*k; i++) {
+    kernel[i] = bench_rand() & 0xff;
   }
+
+  LoadV_Width((uint64_t)&vwidth);
+
+  int8_t *kernel_ptr = kernel;
+  LoadV_D_Kernel((uint64_t)(kernel_ptr), k, 0, 0);
+  LoadV_D_Kernel((uint64_t)(kernel_ptr+k), k, 1, 0);
+  LoadV_D_Kernel((uint64_t)(kernel_ptr+2*k), k, 2, 0);
+  LoadV_D_Kernel((uint64_t)(kernel_ptr+3*k), k, 3, 0);
+  LoadV_D_Kernel((uint64_t)(kernel_ptr+4*k), k, 4, 0);
+
+  uint16_t *col_ptr;
+  for (int i=0; i<m; i++) {
+    col_ptr = &A[0][i];
+    LoadV_D_Main((uint64_t)(col_ptr), k, 0, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+N), k, 1, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+2*N), k, 2, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+3*N), k, 3, 0);
+    LoadV_D_Main((uint64_t)(col_ptr+4*N), k, 4, 0);
+    col_ptr += 5*N;
+    B[0 * m + i] = Conv(k);
+
+    for (int j=1; j<m; j++) {
+      LoadV_P((uint64_t)(col_ptr), k, 0);
+      B[j * m + i] = Conv(k);
+      col_ptr += N;
+    }
+  }
+
+  bench_free(B);
+  bench_free(kernel);
+
 }
 
 int bench_conv16_perf_validate() {

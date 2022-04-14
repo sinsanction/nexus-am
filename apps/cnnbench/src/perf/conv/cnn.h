@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#define N_SIZE 100
+#define N_SIZE 20
 
 inline void LoadV_Width(uint64_t addr) {
   register uint64_t addr_reg asm ("a0") = addr;

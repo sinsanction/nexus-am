@@ -23,40 +23,40 @@ void bench_conv16_base_run() {
   uint16_t *C;        //std output
   int8_t *kernel;     //kernel
 
-  for (k=1; k<=5; k++) {
-    m = (N - k) / S + 1;
-    C = (uint16_t *)bench_alloc(sizeof(uint16_t) * m * m);
-    kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k * k);
+  k = 5;
+  m = (N - k) / S + 1;
+  C = (uint16_t *)bench_alloc(sizeof(uint16_t) * m * m);
+  kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k * k);
 
-    for (int i=0; i<k*k; i++) {
-      kernel[i] = bench_rand() & 0xff;
+  for (int i=0; i<k*k; i++) {
+    kernel[i] = bench_rand() & 0xff;
+  }
+
+  for (int i=0; i<m; i++) {
+    // std res
+    int32_t tmp_res = 0;
+    for (int si=0; si<k; si++) {
+      for (int sj=0; sj<k; sj++) {
+        tmp_res += A[0 + sj][i + si] * kernel[si * k + sj];
+      }
     }
+    C[0 * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xffff) ? 0xffff : tmp_res;
 
-    for (int i=0; i<m; i++) {
+    for (int j=1; j<m; j++) {
       // std res
       int32_t tmp_res = 0;
       for (int si=0; si<k; si++) {
         for (int sj=0; sj<k; sj++) {
-          tmp_res += A[0 + sj][i + si] * kernel[si * k + sj];
+          tmp_res += A[j + sj][i + si] * kernel[si * k + sj];
         }
       }
-      C[0 * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xffff) ? 0xffff : tmp_res;
-
-      for (int j=1; j<m; j++) {
-        // std res
-        int32_t tmp_res = 0;
-        for (int si=0; si<k; si++) {
-          for (int sj=0; sj<k; sj++) {
-            tmp_res += A[j + sj][i + si] * kernel[si * k + sj];
-          }
-        }
-        C[j * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xffff) ? 0xffff : tmp_res;
-      }
+      C[j * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xffff) ? 0xffff : tmp_res;
     }
-
-    bench_free(C);
-    bench_free(kernel);
   }
+
+  bench_free(C);
+  bench_free(kernel);
+
 }
 
 int bench_conv16_base_validate() {

@@ -27,48 +27,48 @@ void bench_pool8_base_run() {
   uint8_t *Cm;        //std max output
   uint8_t *Ca;        //std avg output
 
-  for (k=1; k<=5; k++) {
-    m = (N - k) / S + 1;
-    Cm = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
-    Ca = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
+  k = 5;
+  m = (N - k) / S + 1;
+  Cm = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
+  Ca = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
 
-    for (int i=0; i<m; i++) {
+  for (int i=0; i<m; i++) {
+    // std res
+    uint8_t tmp_res_max = 0;
+    uint32_t tmp_res_avg = 0;
+    for (int si=0; si<k; si++) {
+      for (int sj=0; sj<k; sj++) {
+        tmp_res_max = max(tmp_res_max, A[0 + sj][i + si]);
+        tmp_res_avg += A[0 + sj][i + si];
+      }
+    }
+    Cm[0 * m + i] = tmp_res_max;
+    uint32_t div = tmp_res_avg / (k * k);
+    uint32_t rem = tmp_res_avg % (k * k);
+    uint32_t cin = ((rem * 2) >= (k * k)) ? 1 : 0;
+    Ca[0 * m + i] = div + cin;
+
+    for (int j=1; j<m; j++) {
       // std res
       uint8_t tmp_res_max = 0;
       uint32_t tmp_res_avg = 0;
       for (int si=0; si<k; si++) {
         for (int sj=0; sj<k; sj++) {
-          tmp_res_max = max(tmp_res_max, A[0 + sj][i + si]);
-          tmp_res_avg += A[0 + sj][i + si];
+          tmp_res_max = max(tmp_res_max, A[j + sj][i + si]);
+          tmp_res_avg += A[j + sj][i + si];
         }
       }
-      Cm[0 * m + i] = tmp_res_max;
+      Cm[j * m + i] = tmp_res_max;
       uint32_t div = tmp_res_avg / (k * k);
       uint32_t rem = tmp_res_avg % (k * k);
       uint32_t cin = ((rem * 2) >= (k * k)) ? 1 : 0;
-      Ca[0 * m + i] = div + cin;
-
-      for (int j=1; j<m; j++) {
-        // std res
-        uint8_t tmp_res_max = 0;
-        uint32_t tmp_res_avg = 0;
-        for (int si=0; si<k; si++) {
-          for (int sj=0; sj<k; sj++) {
-            tmp_res_max = max(tmp_res_max, A[j + sj][i + si]);
-            tmp_res_avg += A[j + sj][i + si];
-          }
-        }
-        Cm[j * m + i] = tmp_res_max;
-        uint32_t div = tmp_res_avg / (k * k);
-        uint32_t rem = tmp_res_avg % (k * k);
-        uint32_t cin = ((rem * 2) >= (k * k)) ? 1 : 0;
-        Ca[j * m + i] = div + cin;
-      }
+      Ca[j * m + i] = div + cin;
     }
-
-    bench_free(Cm);
-    bench_free(Ca);
   }
+
+  bench_free(Cm);
+  bench_free(Ca);
+
 }
 
 int bench_pool8_base_validate() {
