@@ -1,7 +1,7 @@
 #include <benchmark.h>
 #include "cnn.h"
 
-#define N 100
+#define N N_SIZE
 #define S 1
 
 static uint16_t A[N][N];
