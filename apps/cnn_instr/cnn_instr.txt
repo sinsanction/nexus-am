@@ -1,0 +1,68 @@
+conv: res_reg=a0, k=1 : 0x0010450b
+conv: res_reg=a0, k=2 : 0x0020450b
+conv: res_reg=a0, k=3 : 0x0030450b
+conv: res_reg=a0, k=4 : 0x0040450b
+conv: res_reg=a0, k=5 : 0x0050450b
+
+pool-max: res_reg=a0, k=1 : 0x0010e50b
+pool-max: res_reg=a0, k=2 : 0x0020e50b
+pool-max: res_reg=a0, k=3 : 0x0030e50b
+pool-max: res_reg=a0, k=4 : 0x0040e50b
+pool-max: res_reg=a0, k=5 : 0x0050e50b
+
+pool-avg: res_reg=a0, k=1 : 0x0011650b
+pool-avg: res_reg=a0, k=2 : 0x0021650b
+pool-avg: res_reg=a0, k=3 : 0x0031650b
+pool-avg: res_reg=a0, k=4 : 0x0041650b
+pool-avg: res_reg=a0, k=5 : 0x0051650b
+
+act: res_reg=a2 : 0x00b5760b
+
+loadv-w: addr_reg=a0 : 0x0005000b
+
+loadv-d-main: addr_reg=a0, k=1, vaddr=00, vtag=0 : 0x0015200b
+
+loadv-d-main: addr_reg=a0, k=2, vaddr=00, vtag=0 : 0x0025200b
+loadv-d-main: addr_reg=a0, k=2, vaddr=0x01, vtag=0 : 0x0025208b
+
+loadv-d-main: addr_reg=a0, k=3, vaddr=00, vtag=0 : 0x0035200b
+loadv-d-main: addr_reg=a0, k=3, vaddr=0x01, vtag=0 : 0x0035208b
+loadv-d-main: addr_reg=a0, k=3, vaddr=0x02, vtag=0 : 0x0035210b
+
+loadv-d-main: addr_reg=a0, k=4, vaddr=00, vtag=0 : 0x0045200b
+loadv-d-main: addr_reg=a0, k=4, vaddr=0x01, vtag=0 : 0x0045208b
+loadv-d-main: addr_reg=a0, k=4, vaddr=0x02, vtag=0 : 0x0045210b
+loadv-d-main: addr_reg=a0, k=4, vaddr=0x03, vtag=0 : 0x0045218b
+
+loadv-d-main: addr_reg=a0, k=5, vaddr=00, vtag=0 : 0x0055200b
+loadv-d-main: addr_reg=a0, k=5, vaddr=0x01, vtag=0 : 0x0055208b
+loadv-d-main: addr_reg=a0, k=5, vaddr=0x02, vtag=0 : 0x0055210b
+loadv-d-main: addr_reg=a0, k=5, vaddr=0x03, vtag=0 : 0x0055218b
+loadv-d-main: addr_reg=a0, k=5, vaddr=0x04, vtag=0 : 0x0055220b
+
+loadv-d-kernel: addr_reg=a0, k=1, vaddr=0x10, vtag=0 : 0x0015280b
+
+loadv-d-kernel: addr_reg=a0, k=2, vaddr=0x10, vtag=0 : 0x0025280b
+loadv-d-kernel: addr_reg=a0, k=2, vaddr=0x11, vtag=0 : 0x0025288b
+
+loadv-d-kernel: addr_reg=a0, k=3, vaddr=0x10, vtag=0 : 0x0035280b
+loadv-d-kernel: addr_reg=a0, k=3, vaddr=0x11, vtag=0 : 0x0035288b
+loadv-d-kernel: addr_reg=a0, k=3, vaddr=0x12, vtag=0 : 0x0035290b
+
+loadv-d-kernel: addr_reg=a0, k=4, vaddr=0x10, vtag=0 : 0x0045280b
+loadv-d-kernel: addr_reg=a0, k=4, vaddr=0x11, vtag=0 : 0x0045288b
+loadv-d-kernel: addr_reg=a0, k=4, vaddr=0x12, vtag=0 : 0x0045290b
+loadv-d-kernel: addr_reg=a0, k=4, vaddr=0x13, vtag=0 : 0x0045298b
+
+loadv-d-kernel: addr_reg=a0, k=5, vaddr=0x10, vtag=0 : 0x0055280b
+loadv-d-kernel: addr_reg=a0, k=5, vaddr=0x11, vtag=0 : 0x0055288b
+loadv-d-kernel: addr_reg=a0, k=5, vaddr=0x12, vtag=0 : 0x0055290b
+loadv-d-kernel: addr_reg=a0, k=5, vaddr=0x13, vtag=0 : 0x0055298b
+loadv-d-kernel: addr_reg=a0, k=5, vaddr=0x14, vtag=0 : 0x00552a0b
+
+loadv-p: addr_reg=a0, k=1, vtag=0 : 0x0015300b
+loadv-p: addr_reg=a0, k=2, vtag=0 : 0x0025300b
+loadv-p: addr_reg=a0, k=3, vtag=0 : 0x0035300b
+loadv-p: addr_reg=a0, k=4, vtag=0 : 0x0045300b
+loadv-p: addr_reg=a0, k=5, vtag=0 : 0x0055300b
+
