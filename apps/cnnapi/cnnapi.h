@@ -1,6 +1,9 @@
 #ifndef __CNNAPI_H__
 #define __CNNAPI_H__
 
+#include <am.h>
+#include <klib.h>
+#include <klib-macros.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -40,12 +43,21 @@ typedef struct fc_filter
   void *addr;
 } fc_filter_t;
 
+inline int round_up_div(int a, int b);
+inline uint16_t get_main_value(uint64_t *img_addr, int i, uint8_t vwidth);
+inline int8_t get_kernel_value(uint64_t *kernel_addr, int i, uint8_t vwidth);
+inline void put_main_value(uint64_t *img_addr, int i, uint8_t vwidth, uint16_t value);
+
 //IO
 image_t *RandomInit(uint32_t width, uint32_t height, uint32_t bits, uint8_t order);
 
+kernel_t *RandomInitKernel(uint32_t k, uint32_t bits);
+
 void SetOutput(image_t *output_image);
 
-//util
+void SetOutputKernel(kernel_t *output_kernel);
+
+//utils
 image_t *Transpose(image_t *input_image);
 
 image_t *MergeImage(image_t *input_image_a, image_t *input_image_b);
