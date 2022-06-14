@@ -3,13 +3,1078 @@
 
 
 //arithmetic
-image_t *Convolution(image_t *input_image, kernel_t *input_kernel, int strides);
 
-image_t *MaxPooling(image_t *input_image, int pool_size, int strides);
+inline uint64_t get_addr64(uint64_t *ptr, int i, uint8_t vwidth) {
+    if (vwidth == 0x80) {
+        return (uint64_t)ptr + (i << 1);
+    }
+    else if (vwidth == 0x40) {
+        return (uint64_t)ptr + i;
+    }
+    else if (vwidth == 0x20) {
+        return ((uint64_t)ptr << 1) + i;
+    }
+    else { //vwidth == 0x10
+        return ((uint64_t)ptr << 2) + i;
+    }
+}
 
-image_t *AvgPooling(image_t *input_image, int pool_size, int strides);
+inline uint64_t add_addr64(uint64_t addr, int i, uint8_t vwidth) {
+    if (vwidth == 0x80) {
+        return addr + (i << 1);
+    }
+    else { //vwidth == 0x40 || vwidth == 0x20 || vwidth == 0x10
+        return addr + i;
+    }
+}
 
-image_t *Activation(image_t *input_image, char *algorithm, uint16_t zero_point);
+inline uint64_t get_addr64_kernel(uint64_t *ptr, int i, uint8_t vwidth) {
+    if (vwidth == 0x8) {
+        return (uint64_t)ptr + i;
+    }
+    else if (vwidth == 0x4) {
+        return ((uint64_t)ptr << 1) + i;
+    }
+    else if (vwidth == 0x2) {
+        return ((uint64_t)ptr << 2) + i;
+    }
+    else { //(vwidth == 0x1)
+        return ((uint64_t)ptr << 3) + i;
+    }
+}
+
+inline uint16_t handle_overflow(uint32_t tmp, uint8_t vwidth) {
+    if (vwidth == 0x80) {
+        return (tmp > 65535) ? 65535 : tmp;
+    }
+    else if (vwidth == 0x40) {
+        return (tmp > 255) ? 255 : tmp;
+    }
+    else if (vwidth == 0x20) {
+        return (tmp > 15) ? 15 : tmp;
+    }
+    else { //vwidth == 0x10
+        return (tmp > 3) ? 3 : tmp;
+    }
+}
+
+//conv
+image_t *convolution_k5(image_t *input_image, kernel_t *input_kernel, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 5) / strides + 1;
+    img->height = (input_image->height - 5) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth_main = input_image->vwidth;
+    uint8_t vwidth_kernel = input_kernel->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+    uint64_t *inker_data = (uint64_t *)(input_kernel->addr);
+
+    int size = round_up_div(width * height * (vwidth_main >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint32_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth_main | vwidth_kernel;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    uint64_t kernel_ptr = get_addr64_kernel(inker_data, 0, vwidth_kernel);
+    LoadV_D_Kernel(kernel_ptr,    5, 0, 0);
+    LoadV_D_Kernel(kernel_ptr+5,  5, 1, 0);
+    LoadV_D_Kernel(kernel_ptr+10, 5, 2, 0);
+    LoadV_D_Kernel(kernel_ptr+15, 5, 3, 0);
+    LoadV_D_Kernel(kernel_ptr+20, 5, 4, 0);
+
+    if (strides >= 5) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth_main);
+                LoadV_D_Main(col_ptr, 5, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 5, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 5, 2, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth_main), 5, 3, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*4, vwidth_main), 5, 4, 0);
+                temp = Conv(5);
+                temp = temp / input_kernel->den;
+                put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth_main);
+            LoadV_D_Main(col_ptr, 5, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 5, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 5, 2, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth_main), 5, 3, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*4, vwidth_main), 5, 4, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*5, vwidth_main);
+            temp = Conv(5);
+            temp = temp / input_kernel->den;
+            put_main_value(img_data, i, vwidth_main, handle_overflow(temp, vwidth_main));
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 5, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth_main);
+                }
+                temp = Conv(5);
+                temp = temp / input_kernel->den;
+                put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *convolution_k4(image_t *input_image, kernel_t *input_kernel, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 4) / strides + 1;
+    img->height = (input_image->height - 4) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth_main = input_image->vwidth;
+    uint8_t vwidth_kernel = input_kernel->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+    uint64_t *inker_data = (uint64_t *)(input_kernel->addr);
+
+    int size = round_up_div(width * height * (vwidth_main >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint32_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth_main | vwidth_kernel;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    uint64_t kernel_ptr = get_addr64_kernel(inker_data, 0, vwidth_kernel);
+    LoadV_D_Kernel(kernel_ptr,    4, 0, 0);
+    LoadV_D_Kernel(kernel_ptr+4,  4, 1, 0);
+    LoadV_D_Kernel(kernel_ptr+8,  4, 2, 0);
+    LoadV_D_Kernel(kernel_ptr+12, 4, 3, 0);
+
+    if (strides >= 4) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth_main);
+                LoadV_D_Main(col_ptr, 4, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 4, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 4, 2, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth_main), 4, 3, 0);
+                temp = Conv(4);
+                temp = temp / input_kernel->den;
+                put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth_main);
+            LoadV_D_Main(col_ptr, 4, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 4, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 4, 2, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth_main), 4, 3, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*4, vwidth_main);
+            temp = Conv(4);
+            temp = temp / input_kernel->den;
+            put_main_value(img_data, i, vwidth_main, handle_overflow(temp, vwidth_main));
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 4, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth_main);
+                }
+                temp = Conv(4);
+                temp = temp / input_kernel->den;
+                put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *convolution_k3(image_t *input_image, kernel_t *input_kernel, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 3) / strides + 1;
+    img->height = (input_image->height - 3) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth_main = input_image->vwidth;
+    uint8_t vwidth_kernel = input_kernel->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+    uint64_t *inker_data = (uint64_t *)(input_kernel->addr);
+
+    int size = round_up_div(width * height * (vwidth_main >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint32_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth_main | vwidth_kernel;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    uint64_t kernel_ptr = get_addr64_kernel(inker_data, 0, vwidth_kernel);
+    LoadV_D_Kernel(kernel_ptr,   3, 0, 0);
+    LoadV_D_Kernel(kernel_ptr+3, 3, 1, 0);
+    LoadV_D_Kernel(kernel_ptr+6, 3, 2, 0);
+
+    if (strides >= 3) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth_main);
+                LoadV_D_Main(col_ptr, 3, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 3, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 3, 2, 0);
+                temp = Conv(3);
+                temp = temp / input_kernel->den;
+                put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth_main);
+            LoadV_D_Main(col_ptr, 3, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 3, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 3, 2, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*3, vwidth_main);
+            temp = Conv(3);
+            temp = temp / input_kernel->den;
+            put_main_value(img_data, i, vwidth_main, handle_overflow(temp, vwidth_main));
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 3, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth_main);
+                }
+                temp = Conv(3);
+                temp = temp / input_kernel->den;
+                put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *convolution_k2(image_t *input_image, kernel_t *input_kernel, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 2) / strides + 1;
+    img->height = (input_image->height - 2) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth_main = input_image->vwidth;
+    uint8_t vwidth_kernel = input_kernel->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+    uint64_t *inker_data = (uint64_t *)(input_kernel->addr);
+
+    int size = round_up_div(width * height * (vwidth_main >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint32_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth_main | vwidth_kernel;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    uint64_t kernel_ptr = get_addr64_kernel(inker_data, 0, vwidth_kernel);
+    LoadV_D_Kernel(kernel_ptr,   2, 0, 0);
+    LoadV_D_Kernel(kernel_ptr+2, 2, 1, 0);
+
+    if (strides >= 2) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth_main);
+                LoadV_D_Main(col_ptr, 2, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 2, 1, 0);
+                temp = Conv(2);
+                temp = temp / input_kernel->den;
+                put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth_main);
+            LoadV_D_Main(col_ptr, 2, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 2, 1, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*2, vwidth_main);
+            temp = Conv(2);
+            temp = temp / input_kernel->den;
+            put_main_value(img_data, i, vwidth_main, handle_overflow(temp, vwidth_main));
+
+            for (int j=1; j<width; j++) {
+                LoadV_P(col_ptr, 2, 0);
+                col_ptr = add_addr64(col_ptr, input_image->height, vwidth_main);
+                temp = Conv(2);
+                temp = temp / input_kernel->den;
+                put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *convolution_k1(image_t *input_image, kernel_t *input_kernel, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 1) / strides + 1;
+    img->height = (input_image->height - 1) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth_main = input_image->vwidth;
+    uint8_t vwidth_kernel = input_kernel->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+    uint64_t *inker_data = (uint64_t *)(input_kernel->addr);
+
+    int size = round_up_div(width * height * (vwidth_main >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint32_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth_main | vwidth_kernel;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    uint64_t kernel_ptr = get_addr64_kernel(inker_data, 0, vwidth_kernel);
+    LoadV_D_Kernel(kernel_ptr,   1, 0, 0);
+
+    for (int i=0; i<height; i++) {
+        for (int j=0; j<width; j++) {
+            col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth_main);
+            LoadV_D_Main(col_ptr, 1, 0, 0);
+            temp = Conv(1);
+            temp = temp / input_kernel->den;
+            put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *Convolution_SC(image_t *input_image, kernel_t *input_kernel, int strides) {
+
+    assert((input_kernel->size <= input_image->width) && (input_kernel->size <= input_image->height));
+    assert((input_kernel->size <= 5) && (input_kernel->size >= 1));
+    assert(input_kernel->den != 0)
+    assert(input_image->order == 1);
+    assert((input_image->vwidth == 0x80) || (input_image->vwidth == 0x40) || (input_image->vwidth == 0x20) || (input_image->vwidth == 0x10));
+    assert((input_kernel->vwidth == 0x8) || (input_kernel->vwidth == 0x4) || (input_kernel->vwidth == 0x2) || (input_kernel->vwidth == 0x1));
+
+    switch (input_kernel->size) {
+        case 5:
+            return convolution_k5(input_image, input_kernel, strides);
+        case 4:
+            return convolution_k4(input_image, input_kernel, strides);
+        case 3:
+            return convolution_k3(input_image, input_kernel, strides);
+        case 2:
+            return convolution_k2(input_image, input_kernel, strides);
+        case 1:
+            return convolution_k1(input_image, input_kernel, strides);
+        default:
+            return NULL;
+    }
+}
+
+//max pool
+image_t *maxpooling_k5(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 5) / strides + 1;
+    img->height = (input_image->height - 5) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    if (strides >= 5) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+                LoadV_D_Main(col_ptr, 5, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 5, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 5, 2, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth), 5, 3, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*4, vwidth), 5, 4, 0);
+                temp = Pool_Max(5);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 5, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 5, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 5, 2, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth), 5, 3, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*4, vwidth), 5, 4, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*5, vwidth);
+            temp = Pool_Max(5);
+            put_main_value(img_data, i, vwidth, temp);
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 5, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth);
+                }
+                temp = Pool_Max(5);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *maxpooling_k4(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 4) / strides + 1;
+    img->height = (input_image->height - 4) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    if (strides >= 4) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+                LoadV_D_Main(col_ptr, 4, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 4, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 4, 2, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth), 4, 3, 0);
+                temp = Pool_Max(4);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 4, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 4, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 4, 2, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth), 4, 3, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*4, vwidth);
+            temp = Pool_Max(4);
+            put_main_value(img_data, i, vwidth, temp);
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 4, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth);
+                }
+                temp = Pool_Max(4);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *maxpooling_k3(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 3) / strides + 1;
+    img->height = (input_image->height - 3) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    if (strides >= 3) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+                LoadV_D_Main(col_ptr, 3, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 3, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 3, 2, 0);
+                temp = Pool_Max(3);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 3, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 3, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 3, 2, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*3, vwidth);
+            temp = Pool_Max(3);
+            put_main_value(img_data, i, vwidth, temp);
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 3, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth);
+                }
+                temp = Pool_Max(3);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *maxpooling_k2(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 2) / strides + 1;
+    img->height = (input_image->height - 2) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    if (strides >= 2) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+                LoadV_D_Main(col_ptr, 2, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 2, 1, 0);
+                temp = Pool_Max(2);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 2, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 2, 1, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*2, vwidth);
+            temp = Pool_Max(2);
+            put_main_value(img_data, i, vwidth, temp);
+
+            for (int j=1; j<width; j++) {
+                LoadV_P(col_ptr, 2, 0);
+                col_ptr = add_addr64(col_ptr, input_image->height, vwidth);
+                temp = Pool_Max(2);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *maxpooling_k1(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 1) / strides + 1;
+    img->height = (input_image->height - 1) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    for (int i=0; i<height; i++) {
+        for (int j=0; j<width; j++) {
+            col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 1, 0, 0);
+            temp = Pool_Max(1);
+            put_main_value(img_data, j * height + i, vwidth, temp);
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *MaxPooling_SC(image_t *input_image, int pool_size, int strides) {
+
+    assert((pool_size <= input_image->width) && (pool_size <= input_image->height));
+    assert((pool_size <= 5) && (pool_size >= 1));
+    assert(input_image->order == 1);
+    assert((input_image->vwidth == 0x80) || (input_image->vwidth == 0x40) || (input_image->vwidth == 0x20) || (input_image->vwidth == 0x10));
+
+    switch (pool_size) {
+        case 5:
+            return maxpooling_k5(input_image, strides);
+        case 4:
+            return maxpooling_k4(input_image, strides);
+        case 3:
+            return maxpooling_k3(input_image, strides);
+        case 2:
+            return maxpooling_k2(input_image, strides);
+        case 1:
+            return maxpooling_k1(input_image, strides);
+        default:
+            return NULL;
+    }
+}
+
+//avg pool
+image_t *avgpooling_k5(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 5) / strides + 1;
+    img->height = (input_image->height - 5) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    if (strides >= 5) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+                LoadV_D_Main(col_ptr, 5, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 5, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 5, 2, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth), 5, 3, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*4, vwidth), 5, 4, 0);
+                temp = Pool_Avg(5);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 5, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 5, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 5, 2, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth), 5, 3, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*4, vwidth), 5, 4, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*5, vwidth);
+            temp = Pool_Avg(5);
+            put_main_value(img_data, i, vwidth, temp);
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 5, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth);
+                }
+                temp = Pool_Avg(5);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *avgpooling_k4(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 4) / strides + 1;
+    img->height = (input_image->height - 4) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    if (strides >= 4) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+                LoadV_D_Main(col_ptr, 4, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 4, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 4, 2, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth), 4, 3, 0);
+                temp = Pool_Avg(4);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 4, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 4, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 4, 2, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth), 4, 3, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*4, vwidth);
+            temp = Pool_Avg(4);
+            put_main_value(img_data, i, vwidth, temp);
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 4, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth);
+                }
+                temp = Pool_Avg(4);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *avgpooling_k3(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 3) / strides + 1;
+    img->height = (input_image->height - 3) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    if (strides >= 3) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+                LoadV_D_Main(col_ptr, 3, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 3, 1, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 3, 2, 0);
+                temp = Pool_Avg(3);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 3, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 3, 1, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth), 3, 2, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*3, vwidth);
+            temp = Pool_Avg(3);
+            put_main_value(img_data, i, vwidth, temp);
+
+            for (int j=1; j<width; j++) {
+                for (int l=0; l<strides; l++) {
+                    LoadV_P(col_ptr, 3, 0);
+                    col_ptr = add_addr64(col_ptr, input_image->height, vwidth);
+                }
+                temp = Pool_Avg(3);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *avgpooling_k2(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 2) / strides + 1;
+    img->height = (input_image->height - 2) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    if (strides >= 2) {
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
+                col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+                LoadV_D_Main(col_ptr, 2, 0, 0);
+                LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 2, 1, 0);
+                temp = Pool_Avg(2);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+    else {
+        for (int i=0; i<height; i++) {
+            col_ptr = get_addr64(inimg_data, i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 2, 0, 0);
+            LoadV_D_Main(add_addr64(col_ptr, input_image->height, vwidth), 2, 1, 0);
+            col_ptr = add_addr64(col_ptr, input_image->height*2, vwidth);
+            temp = Pool_Avg(2);
+            put_main_value(img_data, i, vwidth, temp);
+
+            for (int j=1; j<width; j++) {
+                LoadV_P(col_ptr, 2, 0);
+                col_ptr = add_addr64(col_ptr, input_image->height, vwidth);
+                temp = Pool_Avg(2);
+                put_main_value(img_data, j * height + i, vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *avgpooling_k1(image_t *input_image, int strides) {
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = (input_image->width - 1) / strides + 1;
+    img->height = (input_image->height - 1) / strides + 1;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = img->width;
+    int height = img->height;
+    uint8_t vwidth = img->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    uint16_t temp;
+    uint64_t col_ptr;
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    for (int i=0; i<height; i++) {
+        for (int j=0; j<width; j++) {
+            col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth);
+            LoadV_D_Main(col_ptr, 1, 0, 0);
+            temp = Pool_Avg(1);
+            put_main_value(img_data, j * height + i, vwidth, temp);
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *AvgPooling_SC(image_t *input_image, int pool_size, int strides) {
+
+    assert((pool_size <= input_image->width) && (pool_size <= input_image->height));
+    assert((pool_size <= 5) && (pool_size >= 1));
+    assert(input_image->order == 1);
+    assert((input_image->vwidth == 0x80) || (input_image->vwidth == 0x40) || (input_image->vwidth == 0x20) || (input_image->vwidth == 0x10));
+
+    switch (pool_size) {
+        case 5:
+            return avgpooling_k5(input_image, strides);
+        case 4:
+            return avgpooling_k4(input_image, strides);
+        case 3:
+            return avgpooling_k3(input_image, strides);
+        case 2:
+            return avgpooling_k2(input_image, strides);
+        case 1:
+            return avgpooling_k1(input_image, strides);
+        default:
+            return NULL;
+    }
+}
+
+//act
+image_t *Activation_SC(image_t *input_image, char *algorithm, uint16_t zero_point) {
+
+    assert(strcmp(algorithm, "relu") == 0);
+    assert((input_image->vwidth == 0x80) || (input_image->vwidth == 0x40) || (input_image->vwidth == 0x20) || (input_image->vwidth == 0x10));
+
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = input_image->width;
+    img->height = input_image->height;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int width = input_image->width;
+    int height = input_image->height;
+    uint8_t vwidth = input_image->vwidth;
+    uint64_t *inimg_data = (uint64_t *)(input_image->addr);
+
+    int size = round_up_div(width * height * (vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+
+    uint64_t zero = 0;
+    if (vwidth == 0x80) {
+        for (int j=0; j<4; j++) {
+            zero |= (uint64_t)zero_point << (j * 16);
+        }
+    }
+    else if (vwidth == 0x40) {
+        zero_point = zero_point & 0xff;
+        for (int j=0; j<8; j++) {
+            zero |= (uint64_t)zero_point << (j * 8);
+        }
+    }
+    else if (vwidth == 0x20) {
+        zero_point = zero_point & 0xf;
+        for (int j=0; j<16; j++) {
+            zero |= (uint64_t)zero_point << (j * 4);
+        }
+    }
+    else if (vwidth == 0x10) {
+        zero_point = zero_point & 0x3;
+        for (int j=0; j<32; j++) {
+            zero |= (uint64_t)zero_point << (j * 2);
+        }
+    }
+
+    uint64_t vwidth_reg = vwidth;
+    LoadV_Width((uint64_t)&vwidth_reg);
+
+    for (int i=0; i<size; i++) {
+        img_data[i] = Act(inimg_data[i], zero);
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+//multi channel
+image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides);
+
+image_mc_t *MaxPooling(image_mc_t *input_image, int pool_size, int strides) {
+
+    image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
+    img_mc->width = input_image->width;
+    img_mc->height = input_image->height;
+    img_mc->channel = input_image->channel;
+    img_mc->order = input_image->order;
+
+    for (int i=0; i<input_image->channel; i++) {
+        img_mc->img[i] = MaxPooling_SC(input_image->img[i], pool_size, strides);
+    }
+
+    return img_mc;
+}
+
+image_mc_t *AvgPooling(image_mc_t *input_image, int pool_size, int strides) {
+
+    image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
+    img_mc->width = input_image->width;
+    img_mc->height = input_image->height;
+    img_mc->channel = input_image->channel;
+    img_mc->order = input_image->order;
+
+    for (int i=0; i<input_image->channel; i++) {
+        img_mc->img[i] = AvgPooling_SC(input_image->img[i], pool_size, strides);
+    }
+
+    return img_mc;
+}
+
+image_mc_t *Activation(image_mc_t *input_image, char *algorithm, uint16_t zero_point) {
+
+    image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
+    img_mc->width = input_image->width;
+    img_mc->height = input_image->height;
+    img_mc->channel = input_image->channel;
+    img_mc->order = input_image->order;
+
+    for (int i=0; i<input_image->channel; i++) {
+        img_mc->img[i] = Activation_SC(input_image->img[i], algorithm, zero_point);
+    }
+
+    return img_mc;
+}
+
+//fully connected
+image_t *Flatten(image_mc_t *input_image);
 
 image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units);
 

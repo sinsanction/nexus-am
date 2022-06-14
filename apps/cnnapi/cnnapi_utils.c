@@ -14,7 +14,7 @@ image_t *Transpose(image_t *input_image) {
   uint8_t vwidth = input_image->vwidth;
   uint64_t *inimg_addr = (uint64_t *)(input_image->addr);
 
-  int size = round_up_div(width * height * ((vwidth) >> 3), 64);
+  int size = round_up_div(width * height * (vwidth >> 3), 64);
   uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
   uint16_t temp;
 
@@ -29,8 +29,8 @@ image_t *Transpose(image_t *input_image) {
   }
   else if (input_image->order == 1) {
     img->order = 0;
-    for (int i=0; i<height; i++) {
-      for (int j=0; j<width; j++) {
+    for (int j=0; j<width; j++) {
+      for (int i=0; i<height; i++) {
         temp = get_main_value(inimg_addr, j * height + i, vwidth);
         put_main_value(img_data, i * width + j, vwidth, temp);
       }
@@ -58,7 +58,7 @@ image_t *MergeImage(image_t *input_image_a, image_t *input_image_b) {
   img->vwidth = vwidth;
   img->order = input_image_a->order;
 
-  int size = round_up_div(width * height * ((vwidth) >> 3), 64);
+  int size = round_up_div(width * height * (vwidth >> 3), 64);
   uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
   uint64_t *in_addr_a = (uint64_t *)(input_image_a->addr);
   uint64_t *in_addr_b = (uint64_t *)(input_image_b->addr);

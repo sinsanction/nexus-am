@@ -2,7 +2,7 @@
 
 
 // IO
-image_t *RandomInit(uint32_t width, uint32_t height, uint32_t bits, uint8_t order) {
+image_t *RandomInitImage_SC(uint32_t width, uint32_t height, uint32_t bits, uint8_t order) {
 
   image_t *img = (image_t *)malloc(sizeof(image_t));
   img->width = width;
@@ -38,7 +38,7 @@ image_t *RandomInit(uint32_t width, uint32_t height, uint32_t bits, uint8_t orde
   return img;
 }
 
-kernel_t *RandomInitKernel(uint32_t k, uint32_t bits) {
+kernel_t *RandomInitKernel_SC(uint32_t k, uint32_t bits) {
 
   kernel_t *kernel = (kernel_t *)malloc(sizeof(kernel_t));
   kernel->size = k;
@@ -76,12 +76,52 @@ kernel_t *RandomInitKernel(uint32_t k, uint32_t bits) {
   return kernel;
 }
 
-void SetOutput(image_t *output_image) {
+image_mc_t *RandomInitImage(uint32_t width, uint32_t height, uint32_t bits, uint16_t channel) {
+  
+  image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
+  img_mc->width = width;
+  img_mc->height = height;
+  img_mc->channel = channel;
+  img_mc->order = 1;
+
+  if (! ((bits == 16) || (bits == 8) || (bits == 4) || (bits == 2)) ) {
+    free(img_mc);
+    return NULL;
+  }
+
+  for (int i=0; i<channel; i++) {
+    img_mc->img[i] = RandomInitImage_SC(width, height, bits, 1);
+  }
+
+  return img_mc;
+}
+
+kernel_mc_t *RandomInitKernel(uint32_t k, uint32_t bits, uint16_t channel) {
+
+  kernel_mc_t *ker_mc = (kernel_mc_t *)malloc(sizeof(kernel_mc_t));
+  ker_mc->size = k;
+  ker_mc->channel = channel;
+
+  if (! ((bits == 8) || (bits == 4) || (bits == 2) || (bits == 1)) ) {
+    free(ker_mc);
+    return NULL;
+  }
+
+  for (int i=0; i<channel; i++) {
+    ker_mc->ker[i] = RandomInitKernel_SC(k, bits);
+  }
+
+  return ker_mc;
+}
+
+void SetOutput_SC(image_t *output_image) {
 
   int width = output_image->width;
   int height = output_image->height;
   uint8_t vwidth = output_image->vwidth;
   uint64_t *img_addr = output_image->addr;
+
+  printf("width: %d, height: %d, vwidth: %#x, order: %d\n", width, height, vwidth, output_image->order);
 
   if (output_image->order == 0) {
     for (int i=0; i<height; i++) {
@@ -101,11 +141,13 @@ void SetOutput(image_t *output_image) {
   }
 }
 
-void SetOutputKernel(kernel_t *output_kernel) {
+void SetOutputKernel_SC(kernel_t *output_kernel) {
 
   int k = output_kernel->size;
   uint8_t vwidth = output_kernel->vwidth;
   uint64_t *kernel_addr = output_kernel->addr;
+
+  printf("k: %d, vwidth: %#x, den: %d\n", k, vwidth, output_kernel->den);
 
   for (int i=0; i<k; i++) {
     for (int j=0; j<k; j++) {
@@ -115,3 +157,22 @@ void SetOutputKernel(kernel_t *output_kernel) {
   }
 }
 
+void SetOutput(image_mc_t *output_image) {
+
+  printf("width: %d, height: %d, channel: %d\n", output_image->width, output_image->height, output_image->channel);
+
+  for (int i=0; i<output_image->channel; i++) {
+    printf("\nchannel %d: \n", i);
+    SetOutput_SC(output_image->img[i]);
+  }
+}
+
+void SetOutputKernel(kernel_mc_t *output_kernel) {
+
+  printf("k: %d, channel: %d\n", output_kernel->size, output_kernel->channel);
+
+  for (int i=0; i<output_kernel->channel; i++) {
+    printf("\nchannel %d: \n", i);
+    SetOutputKernel_SC(output_kernel->ker[i])
+  }
+}
