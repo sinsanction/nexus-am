@@ -1026,7 +1026,62 @@ image_t *Activation_SC(image_t *input_image, char *algorithm, uint16_t zero_poin
 }
 
 //multi channel
-image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides);
+image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides) {
+
+    image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
+    img_mc->width = (input_image->width - input_kernel->size) / strides + 1;
+    img_mc->height = (input_image->height - input_kernel->size) / strides + 1;
+    img_mc->channel = input_kernel->channel;
+    img_mc->order = input_image->order;
+
+    image_t **img_tmp;
+    kernel_t *curr_kernel;
+    uint32_t temp;
+    uint8_t vwidth_max = 0;
+    img_tmp = (image_t **)malloc(sizeof(image_t *) * input_image->channel);
+
+    for (int i=0; i<input_image->channel; i++) {
+        vwidth_max = (input_image->img[i]->vwidth > vwidth_max) ? input_image->img[i]->vwidth : vwidth_max;
+    }
+
+    for (int i=0; i<img_mc->channel; i++) {
+        curr_kernel = input_kernel->ker[i];
+        for (int j=0; j<input_image->channel; j++) {
+            img_tmp[j] = Convolution_SC(input_image->img[j], curr_kernel, strides);
+        }
+
+        //merge all channel
+        temp = 0;
+        image_t *new_img = (image_t *)malloc(sizeof(image_t));
+        new_img->width = img_mc->width;
+        new_img->height = img_mc->height;
+        new_img->vwidth = vwidth_max;
+        new_img->order = 1;
+
+        int size = round_up_div(new_img->width * new_img->height * (vwidth_max >> 3), 64);
+        uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+
+        for (int j=0; j<new_img->width; j++) {
+            for (int i=0; i<new_img->height; i++) {
+                for (l=0; l<input_image->channel; l++) {
+                    temp += get_main_value((uint64_t *)(img_tmp[l]->addr), j * new_img->height + i, img_tmp[l]->vwidth);
+                }
+                temp = handle_overflow(temp, vwidth_max);
+                put_main_value(img_data, j * new_img->height + i, vwidth_max, temp);
+            }
+        }
+
+        new_img->addr = (void *)img_data;
+        img_mc->img[i] = new_img;
+
+        for (int i=0; i<input_image->channel; i++) {
+            free(img_tmp[i]);
+        }
+    }
+
+    free(img_tmp);
+    return img_mc;
+}
 
 image_mc_t *MaxPooling(image_mc_t *input_image, int pool_size, int strides) {
 
@@ -1074,7 +1129,71 @@ image_mc_t *Activation(image_mc_t *input_image, char *algorithm, uint16_t zero_p
 }
 
 //fully connected
-image_t *Flatten(image_mc_t *input_image);
+image_t *Flatten(image_mc_t *input_image) {
 
-image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units);
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = 1;
+    img->height = input_image->width * input_image->height * input_image->channel;
+    img->vwidth = input_image->img[0]->vwidth;
+    img->order = input_image->order;
+
+    int size = round_up_div(img->height * (img->vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+
+    for (int c=0; c<input_image->channel; c++) {
+        for (int j=0; j<input_image->width; j++) {
+            for (int i=0; i<input_image->height; i++) {
+                uint16_t temp = get_main_value((uint64_t *)(input_image->img[c]->addr), j * input_image->height + i, input_image->img[c]->vwidth);
+                put_main_value(img_data, c * input_image->width * input_image->height + j * input_image->width + i, img->vwidth, temp);
+            }
+        }
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
+
+image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units) {
+
+    assert(input_image->width == fc_filter_array[0].width);
+    assert(input_image->heigth == fc_filter_array[0].height);
+    assert(input_image->order == fc_filter_array[0].order);
+    assert(fc_filter_array[0].den != 0);
+
+    image_t *img = (image_t *)malloc(sizeof(image_t));
+    img->width = 1;
+    img->height = units;
+    img->vwidth = input_image->vwidth;
+    img->order = input_image->order;
+
+    int size = round_up_div(img->height * (img->vwidth >> 3), 64);
+    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+
+    int width = input_image->width;
+    int height = input_image->height;
+    uint8_t vwidth_main = input_image->vwidth;
+    uint8_t vwidth_kernel;
+    uint64_t *in_addr_img = (uint64_t *)(input_image->addr);
+    uint64_t *in_addr_ker;
+
+    int32_t temp = 0;
+    for (int u=0; u<units; u++) {
+        in_addr_ker = (uint64_t *)(fc_filter_array[u].addr);
+        vwidth_kernel = fc_filter_array[u].vwidth;
+        
+        for (int j=0; j<width; j++) {
+            for (int i=0; i<height; i++) {
+                temp += get_main_value(in_addr_img, j * height + i, vwidth_main) * get_kernel_value(in_addr_ker, j * height + i, vwidth_kernel);
+            }
+        }
+
+        temp = temp / fc_filter_array[u].den;
+        temp = (temp < 0) ? 0 : temp;
+        temp = handle_overflow(temp, vwidth_main);
+        put_main_value(img_data, u, vwidth_main, temp);
+    }
+
+    img->addr = (void *)img_data;
+    return img;
+}
 
