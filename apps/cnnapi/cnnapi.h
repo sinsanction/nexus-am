@@ -104,8 +104,6 @@ image_t *AvgPooling_SC(image_t *input_image, int pool_size, int strides);
 
 image_t *Activation_SC(image_t *input_image, char *algorithm, uint16_t zero_point);
 
-image_t *Dense_SC(image_t *input_image, fc_filter_t *fc_filter_array, int units);
-
 
 image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides);
 
