@@ -1063,7 +1063,7 @@ image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int 
 
         for (int j=0; j<new_img->width; j++) {
             for (int i=0; i<new_img->height; i++) {
-                for (l=0; l<input_image->channel; l++) {
+                for (int l=0; l<input_image->channel; l++) {
                     temp += get_main_value((uint64_t *)(img_tmp[l]->addr), j * new_img->height + i, img_tmp[l]->vwidth);
                 }
                 temp = handle_overflow(temp, vwidth_max);
