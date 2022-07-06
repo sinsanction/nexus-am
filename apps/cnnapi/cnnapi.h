@@ -82,6 +82,10 @@ image_mc_t *RandomInitImage(uint32_t width, uint32_t height, uint32_t bits, uint
 
 kernel_mc_t *RandomInitKernel(uint32_t k, uint32_t bits, uint16_t channel);
 
+fc_filter_t *RandomInitFcFilter(uint32_t width, uint32_t height, uint32_t bits);
+
+fc_filter_t *RandomInitFcFilterArray(uint32_t width, uint32_t height, uint32_t bits, int units);
+
 void SetOutput_SC(image_t *output_image);
 
 void SetOutputKernel_SC(kernel_t *output_kernel);
@@ -89,6 +93,8 @@ void SetOutputKernel_SC(kernel_t *output_kernel);
 void SetOutput(image_mc_t *output_image);
 
 void SetOutputKernel(kernel_mc_t *output_kernel);
+
+void SetOutputFcFilter(fc_filter_t *output_fc_filter);
 
 //utils
 image_t *Transpose(image_t *input_image);

@@ -114,6 +114,57 @@ kernel_mc_t *RandomInitKernel(uint32_t k, uint32_t bits, uint16_t channel) {
   return ker_mc;
 }
 
+fc_filter_t *RandomInitFcFilter(uint32_t width, uint32_t height, uint32_t bits) {
+
+  fc_filter_t *fc = (fc_filter_t *)malloc(sizeof(fc_filter_t));
+  fc->width = width;
+  fc->height = height;
+  fc->order = 1;
+
+  if (bits == 8) {
+    fc->vwidth = 0x8;
+    fc->den = 128;
+  }
+  else if (bits == 4) {
+    fc->vwidth = 0x4;
+    fc->den = 8;
+  }
+  else if (bits == 2) {
+    fc->vwidth = 0x2;
+    fc->den = 2;
+  }
+  else if (bits == 1) {
+    fc->vwidth = 0x1;
+    fc->den = 1;
+  }
+  else {
+    free(fc);
+    return NULL;
+  }
+
+  int size = round_up_div(width * height * bits, 64);
+  uint64_t *fc_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+  uint16_t *data = (uint16_t *)fc_data;
+  for (int i=0; i<size*4; i++) {
+    // RAND_MAX assumed to be 32767
+    data[i] = rand();
+  }
+  fc->addr = (void *)fc_data;
+
+  return fc;
+}
+
+fc_filter_t *RandomInitFcFilterArray(uint32_t width, uint32_t height, uint32_t bits, int units) {
+
+  fc_filter_t *fc = (fc_filter_t *)malloc(sizeof(fc_filter_t) * units);
+
+  for (int i=0; i<units; i++) {
+    fc[i] = *RandomInitFcFilter(width, height, bits);
+  }
+
+  return fc;
+}
+
 void SetOutput_SC(image_t *output_image) {
 
   int width = output_image->width;
@@ -159,20 +210,47 @@ void SetOutputKernel_SC(kernel_t *output_kernel) {
 
 void SetOutput(image_mc_t *output_image) {
 
-  printf("width: %d, height: %d, channel: %d\n", output_image->width, output_image->height, output_image->channel);
+  printf("\nwidth: %d, height: %d, channel: %d\n", output_image->width, output_image->height, output_image->channel);
 
   for (int i=0; i<output_image->channel; i++) {
-    printf("\nchannel %d: \n", i);
+    printf("channel %d: \n", i);
     SetOutput_SC(output_image->img[i]);
   }
 }
 
 void SetOutputKernel(kernel_mc_t *output_kernel) {
 
-  printf("k: %d, channel: %d\n", output_kernel->size, output_kernel->channel);
+  printf("\nk: %d, channel: %d\n", output_kernel->size, output_kernel->channel);
 
   for (int i=0; i<output_kernel->channel; i++) {
-    printf("\nchannel %d: \n", i);
-    SetOutputKernel_SC(output_kernel->ker[i])
+    printf("channel %d: \n", i);
+    SetOutputKernel_SC(output_kernel->ker[i]);
+  }
+}
+
+void SetOutputFcFilter(fc_filter_t *output_fc_filter) {
+
+  int width = output_fc_filter->width;
+  int height = output_fc_filter->height;
+  uint8_t vwidth = output_fc_filter->vwidth;
+  uint64_t *img_addr = output_fc_filter->addr;
+
+  printf("\nwidth: %d, height: %d, vwidth: %#x, order: %d, den: %d\n", width, height, vwidth, output_fc_filter->order, output_fc_filter->den);
+
+  if (output_fc_filter->order == 0) {
+    for (int i=0; i<height; i++) {
+      for (int j=0; j<width; j++) {
+        printf("  %d", get_kernel_value(img_addr, i * width + j, vwidth));
+      }
+      printf("\n");
+    }
+  }
+  else {
+    for (int i=0; i<height; i++) {
+      for (int j=0; j<width; j++) {
+        printf("  %d", get_kernel_value(img_addr, j * height + i, vwidth));
+      }
+      printf("\n");
+    }
   }
 }

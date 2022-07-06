@@ -472,71 +472,65 @@ image_mp_mc_t *Activation_MP(image_mp_mc_t *input_image, char *algorithm, uint16
 }
 
 //fully connected
-image_t *Flatten(image_mc_t *input_image) {
+image_mp_t *Flatten_MP(image_mp_mc_t *input_image) {
 
-    image_t *img = (image_t *)malloc(sizeof(image_t));
-    img->width = 1;
-    img->height = input_image->width * input_image->height * input_image->channel;
-    img->vwidth = input_image->img[0]->vwidth;
-    img->order = input_image->order;
-
-    int size = round_up_div(img->height * (img->vwidth >> 3), 64);
-    uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    image_mp_t *img = (image_mp_t *)malloc(sizeof(image_mp_t));
+    img->width = input_image->width * input_image->channel;
+    img->height = input_image->height;
+    int vwidth_size = round_up_div(img->width, 8);
+    img->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
+    img->addr = (void **)malloc(sizeof(void *) * img->width);
 
     for (int c=0; c<input_image->channel; c++) {
         for (int j=0; j<input_image->width; j++) {
-            for (int i=0; i<input_image->height; i++) {
-                uint16_t temp = get_main_value((uint64_t *)(input_image->img[c]->addr), j * input_image->height + i, input_image->img[c]->vwidth);
-                put_main_value(img_data, c * input_image->width * input_image->height + j * input_image->width + i, img->vwidth, temp);
-            }
+            img->vwidth[c * input_image->width + j] = input_image->img[c]->vwidth[j];
+            img->addr[c * input_image->width + j] = input_image->img[c]->addr[j];
         }
     }
 
-    img->addr = (void *)img_data;
     return img;
 }
 
-image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units) {
+image_mp_t *Dense_MP(image_mp_t *input_image, fc_filter_mp_t *fc_filter_array, int units) {
 
     assert(input_image->width == fc_filter_array[0].width);
     assert(input_image->heigth == fc_filter_array[0].height);
-    assert(input_image->order == fc_filter_array[0].order);
     assert(fc_filter_array[0].den != 0);
 
-    image_t *img = (image_t *)malloc(sizeof(image_t));
+    image_mp_t *img = (image_mp_t *)malloc(sizeof(image_mp_t));
     img->width = 1;
     img->height = units;
-    img->vwidth = input_image->vwidth;
-    img->order = input_image->order;
+    int vwidth_size = round_up_div(img->width, 8);
+    img->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
+    img->addr = (void **)malloc(sizeof(void *) * img->width);
 
-    int size = round_up_div(img->height * (img->vwidth >> 3), 64);
+    uint8_t vwidth_max = input_image->vwidth[0];
+    for (int i=1; i<input_image->width; i++) {
+        vwidth_max = (vwidth_max >= input_image->vwidth[i]) ? vwidth_max : input_image->vwidth[i];
+    }
+    img->vwidth[0] = vwidth_max;
+    int size = round_up_div(img->height * (vwidth_max >> 3), 64);
     uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
+    img->addr[0] = (void *)img_data;
 
     int width = input_image->width;
     int height = input_image->height;
-    uint8_t vwidth_main = input_image->vwidth;
-    uint8_t vwidth_kernel;
-    uint64_t *in_addr_img = (uint64_t *)(input_image->addr);
-    uint64_t *in_addr_ker;
+    int temp = 0;
 
-    int32_t temp = 0;
     for (int u=0; u<units; u++) {
-        in_addr_ker = (uint64_t *)(fc_filter_array[u].addr);
-        vwidth_kernel = fc_filter_array[u].vwidth;
-        
+        temp = 0;
         for (int j=0; j<width; j++) {
             for (int i=0; i<height; i++) {
-                temp += get_main_value(in_addr_img, j * height + i, vwidth_main) * get_kernel_value(in_addr_ker, j * height + i, vwidth_kernel);
+                temp += get_main_value((uint64_t *)(input_image->addr[j]), i, input_image->vwidth[j]) * get_kernel_value((uint64_t *)(fc_filter_array[u].addr[j]), i, fc_filter_array[u].vwidth[j]);
             }
         }
 
         temp = temp / fc_filter_array[u].den;
         temp = (temp < 0) ? 0 : temp;
-        temp = handle_overflow(temp, vwidth_main);
-        put_main_value(img_data, u, vwidth_main, temp);
+        temp = handle_overflow(temp, img->vwidth[0]);
+        put_main_value(img_data, u, img->vwidth[0], temp);
     }
 
-    img->addr = (void *)img_data;
     return img;
 }
 

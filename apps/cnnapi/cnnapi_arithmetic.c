@@ -1156,7 +1156,7 @@ image_t *Flatten(image_mc_t *input_image) {
 image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units) {
 
     assert(input_image->width == fc_filter_array[0].width);
-    assert(input_image->heigth == fc_filter_array[0].height);
+    assert(input_image->height == fc_filter_array[0].height);
     assert(input_image->order == fc_filter_array[0].order);
     assert(fc_filter_array[0].den != 0);
 
@@ -1176,10 +1176,11 @@ image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units) {
     uint64_t *in_addr_img = (uint64_t *)(input_image->addr);
     uint64_t *in_addr_ker;
 
-    int32_t temp = 0;
+    int temp = 0;
     for (int u=0; u<units; u++) {
         in_addr_ker = (uint64_t *)(fc_filter_array[u].addr);
         vwidth_kernel = fc_filter_array[u].vwidth;
+        temp = 0;
         
         for (int j=0; j<width; j++) {
             for (int i=0; i<height; i++) {
