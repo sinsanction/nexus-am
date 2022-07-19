@@ -67,6 +67,10 @@ image_mp_mc_t *RandomInitImage_MP(uint32_t width, uint32_t height, uint16_t chan
 
 kernel_mp_mc_t *RandomInitKernel_MP(uint32_t k, uint16_t channel);
 
+fc_filter_mp_t *RandomInitFcFilter_MP(uint32_t width, uint32_t height);
+
+fc_filter_mp_t *RandomInitFcFilterArray_MP(uint32_t width, uint32_t height, int units);
+
 void SetOutput_MP_SC(image_mp_t *output_image);
 
 void SetOutputKernel_MP_SC(kernel_mp_t *output_kernel);
@@ -74,6 +78,8 @@ void SetOutputKernel_MP_SC(kernel_mp_t *output_kernel);
 void SetOutput_MP(image_mp_mc_t *output_image);
 
 void SetOutputKernel_MP(kernel_mp_mc_t *output_kernel);
+
+void SetOutputFcFilter_MP(fc_filter_mp_t *output_fc_filter);
 
 //arithmetic
 image_mp_t *Convolution_MP_SC(image_mp_t *input_image, kernel_mp_t *input_kernel, int strides);
