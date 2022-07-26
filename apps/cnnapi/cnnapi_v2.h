@@ -1,7 +1,19 @@
 #ifndef __CNNAPI_V2_H__
 #define __CNNAPI_V2_H__
 
+#define __nutshell_am
+
+#ifdef __nutshell_am
+#include <am.h>
+#include <klib.h>
+#include <klib-macros.h>
+#else
+#include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,7 +65,8 @@ typedef struct image_mp_mc
 typedef struct kernel_mp_mc
 {
   uint32_t size;
-  uint16_t channel;
+  uint16_t in_channel;
+  uint16_t out_channel;
 
   kernel_mp_t *ker[MAX_CHANNEL];
 } kernel_mp_mc_t;
@@ -65,7 +78,7 @@ kernel_mp_t *RandomInitKernel_MP_SC(uint32_t k);
 
 image_mp_mc_t *RandomInitImage_MP(uint32_t width, uint32_t height, uint16_t channel);
 
-kernel_mp_mc_t *RandomInitKernel_MP(uint32_t k, uint16_t channel);
+kernel_mp_mc_t *RandomInitKernel_MP(uint32_t k, uint16_t in_channel, uint16_t out_channel);
 
 fc_filter_mp_t *RandomInitFcFilter_MP(uint32_t width, uint32_t height);
 

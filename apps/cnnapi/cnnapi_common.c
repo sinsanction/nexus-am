@@ -1,16 +1,4 @@
-#include "cnnapi.h"
-#include <stdint.h>
-
-inline int round_up_div(int a, int b) {
-  int div = a / b;
-  int rem = a % b;
-  if (rem == 0) {
-    return div;
-  }
-  else {
-    return div + 1;
-  }
-}
+#include "cnnapi_common.h"
 
 
 // read low-bit data
@@ -55,7 +43,7 @@ inline int8_t get_kernel_int1(int8_t *kernel, int i) {
   return kernel_i;
 }
 
-inline uint16_t get_main_value(uint64_t *img_addr, int i, uint8_t vwidth) {
+uint16_t get_main_value(uint64_t *img_addr, int i, uint8_t vwidth) {
   uint16_t res;
   if (vwidth == 0x10) {
     res = get_main_uint2((uint8_t *)img_addr, i);
@@ -74,7 +62,7 @@ inline uint16_t get_main_value(uint64_t *img_addr, int i, uint8_t vwidth) {
   return res;
 }
 
-inline int8_t get_kernel_value(uint64_t *kernel_addr, int i, uint8_t vwidth) {
+int8_t get_kernel_value(uint64_t *kernel_addr, int i, uint8_t vwidth) {
   int8_t res;
   if (vwidth == 0x1) {
     res = get_kernel_int1((int8_t *)kernel_addr, i);
@@ -154,7 +142,7 @@ inline void put_uint1(uint8_t *data, int i, uint8_t value) {
   }
 }
 
-inline void put_main_value(uint64_t *img_addr, int i, uint8_t vwidth, uint16_t value) {
+void put_main_value(uint64_t *img_addr, int i, uint8_t vwidth, uint16_t value) {
   if (vwidth == 0x10) {
     put_uint2((uint8_t *)img_addr, i, value);
   }
@@ -169,5 +157,74 @@ inline void put_main_value(uint64_t *img_addr, int i, uint8_t vwidth, uint16_t v
     uint16_t *data = (uint16_t *)img_addr;
     data[i] = value;
   }
+}
+
+
+// low-bit addr
+uint64_t get_addr64(uint64_t *ptr, int i, uint8_t vwidth) {
+    if (vwidth == 0x80) {
+        return (uint64_t)ptr + (i << 1);
+    }
+    else if (vwidth == 0x40) {
+        return (uint64_t)ptr + i;
+    }
+    else if (vwidth == 0x20) {
+        return ((uint64_t)ptr << 1) + i;
+    }
+    else { //vwidth == 0x10
+        return ((uint64_t)ptr << 2) + i;
+    }
+}
+
+uint64_t add_addr64(uint64_t addr, int i, uint8_t vwidth) {
+    if (vwidth == 0x80) {
+        return addr + (i << 1);
+    }
+    else { //vwidth == 0x40 || vwidth == 0x20 || vwidth == 0x10
+        return addr + i;
+    }
+}
+
+uint64_t get_addr64_kernel(uint64_t *ptr, int i, uint8_t vwidth) {
+    if (vwidth == 0x8) {
+        return (uint64_t)ptr + i;
+    }
+    else if (vwidth == 0x4) {
+        return ((uint64_t)ptr << 1) + i;
+    }
+    else if (vwidth == 0x2) {
+        return ((uint64_t)ptr << 2) + i;
+    }
+    else { //(vwidth == 0x1)
+        return ((uint64_t)ptr << 3) + i;
+    }
+}
+
+
+// others
+inline int round_up_div(int a, int b) {
+  int div = a / b;
+  int rem = a % b;
+  if (rem == 0) {
+    return div;
+  }
+  else {
+    return div + 1;
+  }
+}
+
+uint16_t handle_overflow(uint32_t tmp, uint8_t vwidth) {
+    if (vwidth == 0x80) {
+        return (tmp > 65535) ? 65535 : tmp;
+    }
+    else if (vwidth == 0x40) {
+        return (tmp > 255) ? 255 : tmp;
+    }
+    else if (vwidth == 0x20) {
+        return (tmp > 15) ? 15 : tmp;
+    }
+    else { //vwidth == 0x10
+        return (tmp > 3) ? 3 : tmp;
+    }
 }
 

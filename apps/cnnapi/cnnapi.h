@@ -1,14 +1,19 @@
 #ifndef __CNNAPI_H__
 #define __CNNAPI_H__
 
+#define __nutshell_am
+
+#ifdef __nutshell_am
 #include <am.h>
 #include <klib.h>
 #include <klib-macros.h>
+#else
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,15 +68,11 @@ typedef struct image_mc
 typedef struct kernel_mc
 {
   uint32_t size;
-  uint16_t channel;
+  uint16_t in_channel;
+  uint16_t out_channel;
 
   kernel_t *ker[MAX_CHANNEL];
 } kernel_mc_t;
-
-inline int round_up_div(int a, int b);
-inline uint16_t get_main_value(uint64_t *img_addr, int i, uint8_t vwidth);
-inline int8_t get_kernel_value(uint64_t *kernel_addr, int i, uint8_t vwidth);
-inline void put_main_value(uint64_t *img_addr, int i, uint8_t vwidth, uint16_t value);
 
 //IO
 image_t *RandomInitImage_SC(uint32_t width, uint32_t height, uint32_t bits, uint8_t order);
@@ -80,7 +81,7 @@ kernel_t *RandomInitKernel_SC(uint32_t k, uint32_t bits);
 
 image_mc_t *RandomInitImage(uint32_t width, uint32_t height, uint32_t bits, uint16_t channel);
 
-kernel_mc_t *RandomInitKernel(uint32_t k, uint32_t bits, uint16_t channel);
+kernel_mc_t *RandomInitKernel(uint32_t k, uint32_t bits, uint16_t in_channel, uint16_t out_channel);
 
 fc_filter_t *RandomInitFcFilter(uint32_t width, uint32_t height, uint32_t bits);
 

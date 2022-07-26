@@ -1,53 +1,7 @@
 #include "cnninst.h"
-#include "cnnapi.h"
 #include "cnnapi_v2.h"
+#include "cnnapi_common.h"
 
-//arithmetic
-
-inline uint64_t get_addr64(uint64_t *ptr, int i, uint8_t vwidth) {
-    if (vwidth == 0x80) {
-        return (uint64_t)ptr + (i << 1);
-    }
-    else if (vwidth == 0x40) {
-        return (uint64_t)ptr + i;
-    }
-    else if (vwidth == 0x20) {
-        return ((uint64_t)ptr << 1) + i;
-    }
-    else { //vwidth == 0x10
-        return ((uint64_t)ptr << 2) + i;
-    }
-}
-
-inline uint64_t get_addr64_kernel(uint64_t *ptr, int i, uint8_t vwidth) {
-    if (vwidth == 0x8) {
-        return (uint64_t)ptr + i;
-    }
-    else if (vwidth == 0x4) {
-        return ((uint64_t)ptr << 1) + i;
-    }
-    else if (vwidth == 0x2) {
-        return ((uint64_t)ptr << 2) + i;
-    }
-    else { //(vwidth == 0x1)
-        return ((uint64_t)ptr << 3) + i;
-    }
-}
-
-inline uint16_t handle_overflow(uint32_t tmp, uint8_t vwidth) {
-    if (vwidth == 0x80) {
-        return (tmp > 65535) ? 65535 : tmp;
-    }
-    else if (vwidth == 0x40) {
-        return (tmp > 255) ? 255 : tmp;
-    }
-    else if (vwidth == 0x20) {
-        return (tmp > 15) ? 15 : tmp;
-    }
-    else { //vwidth == 0x10
-        return (tmp > 3) ? 3 : tmp;
-    }
-}
 
 //conv
 image_mp_t *Convolution_MP_SC(image_mp_t *input_image, kernel_mp_t *input_kernel, int strides) {
@@ -375,10 +329,12 @@ image_mp_t *Activation_MP_SC(image_mp_t *input_image, char *algorithm, uint16_t 
 //multi channel
 image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides) {
 
+    assert(input_image->channel == input_kernel->in_channel);
+
     image_mp_mc_t *img_mc = (image_mp_mc_t *)malloc(sizeof(image_mp_mc_t));
     img_mc->width = (input_image->width - input_kernel->size) / strides + 1;
     img_mc->height = (input_image->height - input_kernel->size) / strides + 1;
-    img_mc->channel = input_kernel->channel;
+    img_mc->channel = input_kernel->out_channel;
 
     image_mp_t **img_tmp;
     kernel_mp_t *curr_kernel;
@@ -386,8 +342,8 @@ image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int 
     img_tmp = (image_mp_t **)malloc(sizeof(image_mp_t *) * input_image->channel);
 
     for (int i=0; i<img_mc->channel; i++) {
-        curr_kernel = input_kernel->ker[i];
         for (int j=0; j<input_image->channel; j++) {
+            curr_kernel = input_kernel->ker[i*input_kernel->in_channel+j];
             img_tmp[j] = Convolution_MP_SC(input_image->img[j], curr_kernel, strides);
         }
 
@@ -396,6 +352,9 @@ image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int 
         image_mp_t *new_img = (image_mp_t *)malloc(sizeof(image_mp_t));
         new_img->width = img_mc->width;
         new_img->height = img_mc->height;
+        int vwidth_size = round_up_div(new_img->width, 8);
+        new_img->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
+        new_img->addr = (void **)malloc(sizeof(void *) * new_img->width);
 
         for (int j=0; j<new_img->width; j++) {
             uint8_t vwidth_max = img_tmp[0]->vwidth[j];
@@ -494,7 +453,7 @@ image_mp_t *Flatten_MP(image_mp_mc_t *input_image) {
 image_mp_t *Dense_MP(image_mp_t *input_image, fc_filter_mp_t *fc_filter_array, int units) {
 
     assert(input_image->width == fc_filter_array[0].width);
-    assert(input_image->heigth == fc_filter_array[0].height);
+    assert(input_image->height == fc_filter_array[0].height);
     assert(fc_filter_array[0].den != 0);
 
     image_mp_t *img = (image_mp_t *)malloc(sizeof(image_mp_t));

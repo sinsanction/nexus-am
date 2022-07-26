@@ -1,5 +1,6 @@
-#include "cnnapi.h"
 #include "cnnapi_v2.h"
+#include "cnnapi_common.h"
+
 
 // IO
 image_mp_t *RandomInitImage_MP_SC(uint32_t width, uint32_t height) {
@@ -52,6 +53,7 @@ kernel_mp_t *RandomInitKernel_MP_SC(uint32_t k) {
 
   int vwidth_size = round_up_div(k, 8);
   kernel->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
+  kernel->addr = (void **)malloc(sizeof(void *) * k);
   int den_max = 0;
 
   for (int i=0; i<k; i++) {
@@ -106,13 +108,14 @@ image_mp_mc_t *RandomInitImage_MP(uint32_t width, uint32_t height, uint16_t chan
   return img_mc;
 }
 
-kernel_mp_mc_t *RandomInitKernel_MP(uint32_t k, uint16_t channel) {
+kernel_mp_mc_t *RandomInitKernel_MP(uint32_t k, uint16_t in_channel, uint16_t out_channel) {
 
   kernel_mp_mc_t *ker_mc = (kernel_mp_mc_t *)malloc(sizeof(kernel_mp_mc_t));
   ker_mc->size = k;
-  ker_mc->channel = channel;
+  ker_mc->in_channel = in_channel;
+  ker_mc->out_channel = out_channel;
 
-  for (int i=0; i<channel; i++) {
+  for (int i=0; i<in_channel*out_channel; i++) {
     ker_mc->ker[i] = RandomInitKernel_MP_SC(k);
   }
 
@@ -127,6 +130,7 @@ fc_filter_mp_t *RandomInitFcFilter_MP(uint32_t width, uint32_t height) {
 
   int vwidth_size = round_up_div(width, 8);
   fc->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
+  fc->addr = (void **)malloc(sizeof(void *) * width);
   int den_max = 0;
 
   for (int i=0; i<width; i++) {
@@ -197,7 +201,7 @@ void SetOutputKernel_MP_SC(kernel_mp_t *output_kernel) {
 
   int k = output_kernel->size;
 
-  printf("k: %d\n", k);
+  printf("k: %d, den: %d\n", k, output_kernel->den);
 
   for (int i=0; i<k; i++) {
     for (int j=0; j<k; j++) {
@@ -212,18 +216,21 @@ void SetOutput_MP(image_mp_mc_t *output_image) {
   printf("\nwidth: %d, height: %d, channel: %d\n", output_image->width, output_image->height, output_image->channel);
 
   for (int i=0; i<output_image->channel; i++) {
-    printf("channel %d: \n", i);
+    printf("channel #%d: \n", i);
     SetOutput_MP_SC(output_image->img[i]);
   }
 }
 
 void SetOutputKernel_MP(kernel_mp_mc_t *output_kernel) {
 
-  printf("\nk: %d, channel: %d\n", output_kernel->size, output_kernel->channel);
+  printf("\nk: %d, channel_out: %d, channel_in: %d\n", output_kernel->size, output_kernel->out_channel, output_kernel->in_channel);
 
-  for (int i=0; i<output_kernel->channel; i++) {
-    printf("channel %d: \n", i);
-    SetOutputKernel_MP_SC(output_kernel->ker[i])
+  for (int i=0; i<output_kernel->out_channel; i++) {
+    printf("out_channel #%d: \n", i);
+    for (int j=0; j<output_kernel->in_channel; j++) {
+      printf("in_channel #%d: \n", j);
+      SetOutputKernel_MP_SC(output_kernel->ker[i*output_kernel->in_channel+j]);
+    }
   }
 }
 
@@ -232,7 +239,7 @@ void SetOutputFcFilter_MP(fc_filter_mp_t *output_fc_filter) {
   int width = output_fc_filter->width;
   int height = output_fc_filter->height;
 
-  printf("\nwidth: %d, height: %d\n", width, height);
+  printf("\nwidth: %d, height: %d, den: %d\n", width, height, output_fc_filter->den);
 
   for (int i=0; i<height; i++) {
     for (int j=0; j<width; j++) {

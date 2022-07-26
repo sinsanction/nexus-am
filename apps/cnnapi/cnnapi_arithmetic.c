@@ -1,62 +1,7 @@
 #include "cnninst.h"
 #include "cnnapi.h"
+#include "cnnapi_common.h"
 
-
-//arithmetic
-
-inline uint64_t get_addr64(uint64_t *ptr, int i, uint8_t vwidth) {
-    if (vwidth == 0x80) {
-        return (uint64_t)ptr + (i << 1);
-    }
-    else if (vwidth == 0x40) {
-        return (uint64_t)ptr + i;
-    }
-    else if (vwidth == 0x20) {
-        return ((uint64_t)ptr << 1) + i;
-    }
-    else { //vwidth == 0x10
-        return ((uint64_t)ptr << 2) + i;
-    }
-}
-
-inline uint64_t add_addr64(uint64_t addr, int i, uint8_t vwidth) {
-    if (vwidth == 0x80) {
-        return addr + (i << 1);
-    }
-    else { //vwidth == 0x40 || vwidth == 0x20 || vwidth == 0x10
-        return addr + i;
-    }
-}
-
-inline uint64_t get_addr64_kernel(uint64_t *ptr, int i, uint8_t vwidth) {
-    if (vwidth == 0x8) {
-        return (uint64_t)ptr + i;
-    }
-    else if (vwidth == 0x4) {
-        return ((uint64_t)ptr << 1) + i;
-    }
-    else if (vwidth == 0x2) {
-        return ((uint64_t)ptr << 2) + i;
-    }
-    else { //(vwidth == 0x1)
-        return ((uint64_t)ptr << 3) + i;
-    }
-}
-
-inline uint16_t handle_overflow(uint32_t tmp, uint8_t vwidth) {
-    if (vwidth == 0x80) {
-        return (tmp > 65535) ? 65535 : tmp;
-    }
-    else if (vwidth == 0x40) {
-        return (tmp > 255) ? 255 : tmp;
-    }
-    else if (vwidth == 0x20) {
-        return (tmp > 15) ? 15 : tmp;
-    }
-    else { //vwidth == 0x10
-        return (tmp > 3) ? 3 : tmp;
-    }
-}
 
 //conv
 image_t *convolution_k5(image_t *input_image, kernel_t *input_kernel, int strides) {
@@ -1028,10 +973,12 @@ image_t *Activation_SC(image_t *input_image, char *algorithm, uint16_t zero_poin
 //multi channel
 image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides) {
 
+    assert(input_image->channel == input_kernel->in_channel);
+
     image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
     img_mc->width = (input_image->width - input_kernel->size) / strides + 1;
     img_mc->height = (input_image->height - input_kernel->size) / strides + 1;
-    img_mc->channel = input_kernel->channel;
+    img_mc->channel = input_kernel->out_channel;
     img_mc->order = input_image->order;
 
     image_t **img_tmp;
@@ -1045,8 +992,8 @@ image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int 
     }
 
     for (int i=0; i<img_mc->channel; i++) {
-        curr_kernel = input_kernel->ker[i];
         for (int j=0; j<input_image->channel; j++) {
+            curr_kernel = input_kernel->ker[i*input_kernel->in_channel+j];
             img_tmp[j] = Convolution_SC(input_image->img[j], curr_kernel, strides);
         }
 

@@ -1,4 +1,5 @@
 #include "cnnapi.h"
+#include "cnnapi_common.h"
 
 
 // IO
@@ -96,18 +97,19 @@ image_mc_t *RandomInitImage(uint32_t width, uint32_t height, uint32_t bits, uint
   return img_mc;
 }
 
-kernel_mc_t *RandomInitKernel(uint32_t k, uint32_t bits, uint16_t channel) {
+kernel_mc_t *RandomInitKernel(uint32_t k, uint32_t bits, uint16_t in_channel, uint16_t out_channel) {
 
   kernel_mc_t *ker_mc = (kernel_mc_t *)malloc(sizeof(kernel_mc_t));
   ker_mc->size = k;
-  ker_mc->channel = channel;
+  ker_mc->in_channel = in_channel;
+  ker_mc->out_channel = out_channel;
 
   if (! ((bits == 8) || (bits == 4) || (bits == 2) || (bits == 1)) ) {
     free(ker_mc);
     return NULL;
   }
 
-  for (int i=0; i<channel; i++) {
+  for (int i=0; i<in_channel*out_channel; i++) {
     ker_mc->ker[i] = RandomInitKernel_SC(k, bits);
   }
 
@@ -213,18 +215,21 @@ void SetOutput(image_mc_t *output_image) {
   printf("\nwidth: %d, height: %d, channel: %d\n", output_image->width, output_image->height, output_image->channel);
 
   for (int i=0; i<output_image->channel; i++) {
-    printf("channel %d: \n", i);
+    printf("channel #%d: \n", i);
     SetOutput_SC(output_image->img[i]);
   }
 }
 
 void SetOutputKernel(kernel_mc_t *output_kernel) {
 
-  printf("\nk: %d, channel: %d\n", output_kernel->size, output_kernel->channel);
+  printf("\nk: %d, channel_out: %d, channel_in: %d\n", output_kernel->size, output_kernel->out_channel, output_kernel->in_channel);
 
-  for (int i=0; i<output_kernel->channel; i++) {
-    printf("channel %d: \n", i);
-    SetOutputKernel_SC(output_kernel->ker[i]);
+  for (int i=0; i<output_kernel->out_channel; i++) {
+    printf("out_channel #%d: \n", i);
+    for (int j=0; j<output_kernel->in_channel; j++) {
+      printf("in_channel #%d: \n", j);
+      SetOutputKernel_SC(output_kernel->ker[i*output_kernel->in_channel+j]);
+    }
   }
 }
 

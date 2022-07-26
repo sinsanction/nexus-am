@@ -1,4 +1,5 @@
 #include "cnnapi.h"
+#include "cnnapi_common.h"
 
 
 // util
