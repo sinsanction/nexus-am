@@ -319,7 +319,7 @@ image_t *Convolution_SC(image_t *input_image, kernel_t *input_kernel, int stride
 
     assert((input_kernel->size <= input_image->width) && (input_kernel->size <= input_image->height));
     assert((input_kernel->size <= 5) && (input_kernel->size >= 1));
-    assert(input_kernel->den != 0)
+    assert(input_kernel->den != 0);
     assert(input_image->order == 1);
     assert((input_image->vwidth == 0x80) || (input_image->vwidth == 0x40) || (input_image->vwidth == 0x20) || (input_image->vwidth == 0x10));
     assert((input_kernel->vwidth == 0x8) || (input_kernel->vwidth == 0x4) || (input_kernel->vwidth == 0x2) || (input_kernel->vwidth == 0x1));

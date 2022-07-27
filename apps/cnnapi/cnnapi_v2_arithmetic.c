@@ -283,7 +283,7 @@ image_mp_t *Activation_MP_SC(image_mp_t *input_image, char *algorithm, uint16_t 
     img->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
     img->addr = (void **)malloc(sizeof(void *) * input_image->width);
 
-    for (int i=0; i<width; i++) {
+    for (int i=0; i<img->width; i++) {
         img->vwidth[i] = input_image->vwidth[i];
         int size = round_up_div(img->height * (img->vwidth[i] >> 3), 64);
         uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
@@ -327,7 +327,7 @@ image_mp_t *Activation_MP_SC(image_mp_t *input_image, char *algorithm, uint16_t 
 }
 
 //multi channel
-image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides) {
+image_mp_mc_t *Convolution_MP(image_mp_mc_t *input_image, kernel_mp_mc_t *input_kernel, int strides) {
 
     assert(input_image->channel == input_kernel->in_channel);
 
