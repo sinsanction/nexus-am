@@ -205,7 +205,7 @@ void SetOutputKernel_MP_SC(kernel_mp_t *output_kernel) {
 
   for (int i=0; i<k; i++) {
     for (int j=0; j<k; j++) {
-      printf("  %d", get_kernel_value((uint64_t *)(output_kernel->addr[j]), i, output_kernel->vwidth[j]));
+      printf("  %d", get_kernel_value((uint64_t *)(output_kernel->addr[i]), j, output_kernel->vwidth[i]));
     }
     printf("\n");
   }

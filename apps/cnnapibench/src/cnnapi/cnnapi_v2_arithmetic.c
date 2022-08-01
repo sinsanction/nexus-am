@@ -348,7 +348,6 @@ image_mp_mc_t *Convolution_MP(image_mp_mc_t *input_image, kernel_mp_mc_t *input_
         }
 
         //merge all channel
-        temp = 0;
         image_mp_t *new_img = (image_mp_t *)malloc(sizeof(image_mp_t));
         new_img->width = img_mc->width;
         new_img->height = img_mc->height;
@@ -369,6 +368,7 @@ image_mp_mc_t *Convolution_MP(image_mp_mc_t *input_image, kernel_mp_mc_t *input_
 
         for (int j=0; j<new_img->width; j++) {
             for (int i=0; i<new_img->height; i++) {
+                temp = 0;
                 for (int l=0; l<input_image->channel; l++) {
                     temp += get_main_value((uint64_t *)(img_tmp[l]->addr[j]), i, img_tmp[l]->vwidth[j]);
                 }

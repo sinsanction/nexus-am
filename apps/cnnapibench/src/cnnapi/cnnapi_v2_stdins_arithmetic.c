@@ -37,7 +37,7 @@ image_mp_t *StdIns_Convolution_MP_SC(image_mp_t *input_image, kernel_mp_t *input
             temp = 0;
             for (int si=0; si<k; si++) {
                 for (int sj=0; sj<k; sj++) {
-                    temp += get_main_value((uint64_t *)(input_image->addr[j * strides + sj]), i * strides + si, input_image->vwidth[j * strides + sj]) * get_kernel_value((uint64_t *)(input_kernel->addr[si], sj, input_kernel->vwidth[si]);
+                    temp += get_main_value((uint64_t *)(input_image->addr[j * strides + sj]), i * strides + si, input_image->vwidth[j * strides + sj]) * get_kernel_value((uint64_t *)(input_kernel->addr[si]), sj, input_kernel->vwidth[si]);
                 }
             }
             temp = (temp < 0) ? 0 : temp;
@@ -159,7 +159,7 @@ image_mp_t *StdIns_Activation_MP_SC(image_mp_t *input_image, char *algorithm, ui
         uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
         uint64_t *inimg_data = (uint64_t *)(input_image->addr[i]);
 
-        for (int j=0; j<size; j++) {
+        for (int j=0; j<img->height; j++) {
             uint16_t new_data = get_main_value(inimg_data, j, input_image->vwidth[i]);
             uint16_t res = (new_data > zero_point[i]) ? new_data : zero_point[i];
             put_main_value(img_data, j, img->vwidth[i], res);
@@ -192,7 +192,6 @@ image_mp_mc_t *StdIns_Convolution_MP(image_mp_mc_t *input_image, kernel_mp_mc_t 
         }
 
         //merge all channel
-        temp = 0;
         image_mp_t *new_img = (image_mp_t *)malloc(sizeof(image_mp_t));
         new_img->width = img_mc->width;
         new_img->height = img_mc->height;
@@ -213,6 +212,7 @@ image_mp_mc_t *StdIns_Convolution_MP(image_mp_mc_t *input_image, kernel_mp_mc_t 
 
         for (int j=0; j<new_img->width; j++) {
             for (int i=0; i<new_img->height; i++) {
+                temp = 0;
                 for (int l=0; l<input_image->channel; l++) {
                     temp += get_main_value((uint64_t *)(img_tmp[l]->addr[j]), i, img_tmp[l]->vwidth[j]);
                 }
