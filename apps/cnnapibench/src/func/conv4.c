@@ -21,6 +21,7 @@ void bench_conv4_prepare() {
   A = RandomInitImage(w, h, 2, in_channel);
   kernel = RandomInitKernel(k, 1, in_channel, out_channel);
   test_pass = 1;
+  SetOutputKernel(kernel);
 }
 
 void bench_conv4_run() {

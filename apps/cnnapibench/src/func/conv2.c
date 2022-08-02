@@ -19,6 +19,7 @@ void bench_conv2_prepare() {
   A = RandomInitImage_SC(w, h, 4, 1);
   kernel = RandomInitKernel_SC(k, 4);
   test_pass = 1;
+  SetOutputKernel_SC(kernel);
 }
 
 void bench_conv2_run() {

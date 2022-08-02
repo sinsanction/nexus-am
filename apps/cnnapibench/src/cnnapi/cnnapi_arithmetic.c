@@ -1033,8 +1033,8 @@ image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int 
 image_mc_t *MaxPooling(image_mc_t *input_image, int pool_size, int strides) {
 
     image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
-    img_mc->width = input_image->width;
-    img_mc->height = input_image->height;
+    img_mc->width = (input_image->width - pool_size) / strides + 1;
+    img_mc->height = (input_image->height - pool_size) / strides + 1;
     img_mc->channel = input_image->channel;
     img_mc->order = input_image->order;
 
@@ -1048,8 +1048,8 @@ image_mc_t *MaxPooling(image_mc_t *input_image, int pool_size, int strides) {
 image_mc_t *AvgPooling(image_mc_t *input_image, int pool_size, int strides) {
 
     image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
-    img_mc->width = input_image->width;
-    img_mc->height = input_image->height;
+    img_mc->width = (input_image->width - pool_size) / strides + 1;
+    img_mc->height = (input_image->height - pool_size) / strides + 1;
     img_mc->channel = input_image->channel;
     img_mc->order = input_image->order;
 

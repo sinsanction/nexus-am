@@ -76,14 +76,14 @@ image_mp_t *StdIns_MaxPooling_MP_SC(image_mp_t *input_image, int pool_size, int 
     int width = img->width;
     int height = img->height;
     int k = pool_size;
-    int temp;
+    uint16_t temp;
 
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
             temp = 0;
             for (int sj=0; sj<k; sj++) {
                 for (int si=0; si<k; si++) {
-                    int new_data = get_main_value((uint64_t *)(input_image->addr[j * strides + sj]), i * strides + si, input_image->vwidth[j * strides + sj]);
+                    uint16_t new_data = get_main_value((uint64_t *)(input_image->addr[j * strides + sj]), i * strides + si, input_image->vwidth[j * strides + sj]);
                     temp = (temp > new_data) ? temp : new_data;
                 }
             }
@@ -121,7 +121,7 @@ image_mp_t *StdIns_AvgPooling_MP_SC(image_mp_t *input_image, int pool_size, int 
     int width = img->width;
     int height = img->height;
     int k = pool_size;
-    int temp;
+    uint32_t temp;
 
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
@@ -235,8 +235,8 @@ image_mp_mc_t *StdIns_Convolution_MP(image_mp_mc_t *input_image, kernel_mp_mc_t 
 image_mp_mc_t *StdIns_MaxPooling_MP(image_mp_mc_t *input_image, int pool_size, int strides) {
 
     image_mp_mc_t *img_mc = (image_mp_mc_t *)malloc(sizeof(image_mp_mc_t));
-    img_mc->width = input_image->width;
-    img_mc->height = input_image->height;
+    img_mc->width = (input_image->width - pool_size) / strides + 1;
+    img_mc->height = (input_image->height - pool_size) / strides + 1;
     img_mc->channel = input_image->channel;
 
     for (int i=0; i<input_image->channel; i++) {
@@ -249,8 +249,8 @@ image_mp_mc_t *StdIns_MaxPooling_MP(image_mp_mc_t *input_image, int pool_size, i
 image_mp_mc_t *StdIns_AvgPooling_MP(image_mp_mc_t *input_image, int pool_size, int strides) {
 
     image_mp_mc_t *img_mc = (image_mp_mc_t *)malloc(sizeof(image_mp_mc_t));
-    img_mc->width = input_image->width;
-    img_mc->height = input_image->height;
+    img_mc->width = (input_image->width - pool_size) / strides + 1;
+    img_mc->height = (input_image->height - pool_size) / strides + 1;
     img_mc->channel = input_image->channel;
 
     for (int i=0; i<input_image->channel; i++) {

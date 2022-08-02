@@ -39,7 +39,7 @@ image_mp_t *Convolution_MP_SC(image_mp_t *input_image, kernel_mp_t *input_kernel
         LoadV_D_Kernel(kernel_ptr, input_kernel->size, i, i);
     }
 
-    uint64_t *vwidth_reg = (uint64_t *)(input_image->vwidth);
+    vwidth_reg = (uint64_t *)(input_image->vwidth);
     int count = 0;
     LoadV_Width((uint64_t)vwidth_reg);
 
@@ -391,8 +391,8 @@ image_mp_mc_t *Convolution_MP(image_mp_mc_t *input_image, kernel_mp_mc_t *input_
 image_mp_mc_t *MaxPooling_MP(image_mp_mc_t *input_image, int pool_size, int strides) {
 
     image_mp_mc_t *img_mc = (image_mp_mc_t *)malloc(sizeof(image_mp_mc_t));
-    img_mc->width = input_image->width;
-    img_mc->height = input_image->height;
+    img_mc->width = (input_image->width - pool_size) / strides + 1;
+    img_mc->height = (input_image->height - pool_size) / strides + 1;
     img_mc->channel = input_image->channel;
 
     for (int i=0; i<input_image->channel; i++) {
@@ -405,8 +405,8 @@ image_mp_mc_t *MaxPooling_MP(image_mp_mc_t *input_image, int pool_size, int stri
 image_mp_mc_t *AvgPooling_MP(image_mp_mc_t *input_image, int pool_size, int strides) {
 
     image_mp_mc_t *img_mc = (image_mp_mc_t *)malloc(sizeof(image_mp_mc_t));
-    img_mc->width = input_image->width;
-    img_mc->height = input_image->height;
+    img_mc->width = (input_image->width - pool_size) / strides + 1;
+    img_mc->height = (input_image->height - pool_size) / strides + 1;
     img_mc->channel = input_image->channel;
 
     for (int i=0; i<input_image->channel; i++) {

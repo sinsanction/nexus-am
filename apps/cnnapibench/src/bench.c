@@ -90,7 +90,7 @@ int main(const char *args) {
     current = bench;
     setting = &bench->settings;
     const char *msg = bench_check(bench);
-    printf("\n[%s] %s: ", bench->name, bench->desc);
+    printf("\n[%s] %s: \n", bench->name, bench->desc);
     if (msg != NULL) {
       printf("Ignored %s\n", msg);
     } else {

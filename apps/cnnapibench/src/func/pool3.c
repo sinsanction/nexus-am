@@ -49,6 +49,9 @@ int bench_pool3_validate() {
   }
   else {
     printf("end: fail\n");
+    SetOutput(A);
+    SetOutput(B);
+    SetOutput(C);
   }
   bench_free(A);
   bench_free(B);
