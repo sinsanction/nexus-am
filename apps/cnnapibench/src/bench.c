@@ -24,9 +24,9 @@ Benchmark benchmarks_func[] = {
 Benchmark benchmarks_func_v2[] = {
   BENCHMARK_V2_LIST(ENTRY)
 };
-/*Benchmark benchmarks_perf[] = {
-  BENCHMARK_PERF_LIST(ENTRY)
-};*/
+Benchmark benchmarks_lenet[] = {
+  BENCHMARK_LENET_LIST(ENTRY)
+};
 
 // Running a benchmark
 static void bench_prepare(Result *res) {
@@ -68,6 +68,9 @@ int main(const char *args) {
 
   if      (strcmp(setting_name, "testfunc") == 0) setting_id = 0;
   else if (strcmp(setting_name, "testfuncv2") == 0) setting_id = 1;
+  else if (strcmp(setting_name, "test_lenet_func") == 0) setting_id = 2;
+  else if (strcmp(setting_name, "test_lenet_base") == 0) setting_id = 3;
+  else if (strcmp(setting_name, "test_lenet_perf") == 0) setting_id = 4;
   else {
     printf("Invalid mainargs: \"%s\"; "
            "must be in {testfunc, testfuncv2}\n", setting_name);
@@ -83,6 +86,9 @@ int main(const char *args) {
   int bench_length;
   Benchmark *test_bench;
   if      (setting_id == 1) { bench_length = LENGTH(benchmarks_func_v2); test_bench = benchmarks_func_v2; }
+  else if (setting_id == 2) { bench_length = 1; test_bench = &benchmarks_lenet[0]; }
+  else if (setting_id == 3) { bench_length = 1; test_bench = &benchmarks_lenet[1]; }
+  else if (setting_id == 4) { bench_length = 1; test_bench = &benchmarks_lenet[2]; }
   else { bench_length = LENGTH(benchmarks_func); test_bench = benchmarks_func; }
 
   for (int i = 0; i < bench_length; i ++) {

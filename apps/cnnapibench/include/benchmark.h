@@ -42,6 +42,11 @@ extern "C" {
 #define ACT1_V2    {     100, 128 KB,  0x00020021}
 #define ACT2_V2    {     100, 128 KB,  0x00020022}
 
+//lenet
+#define LENET5        {     100, 256 KB,  0x00030001}
+#define LENET5_BASE   {     100, 128 KB,  0x00030002}
+#define LENET5_PERF   {     100, 128 KB,  0x00030003}
+
 #define BENCHMARK_LIST(def) \
   def(conv1, "conv1", CONV1, "CNN Conv 1") \
   def(conv2, "conv2", CONV2, "CNN Conv 2") \
@@ -66,7 +71,10 @@ extern "C" {
   def(act1_v2,  "act1_v2",  ACT1_V2,  "CNNv2.0 Act 1") \
   def(act2_v2,  "act2_v2",  ACT2_V2,  "CNNv2.0 Act 2 multi channel")
 
-//#define BENCHMARK_PERF_LIST(def)
+#define BENCHMARK_LENET_LIST(def) \
+  def(lenet5,      "lenet5",      LENET5,      "CNN LeNet5") \
+  def(lenet5_base, "lenet5_base", LENET5_BASE, "CNN LeNet5 base") \
+  def(lenet5_perf, "lenet5_perf", LENET5_PERF, "CNN LeNet5 perf")
 
 // Each benchmark will run REPEAT times
 
@@ -77,6 +85,7 @@ extern "C" {
 
 BENCHMARK_LIST(DECL)
 BENCHMARK_V2_LIST(DECL)
+BENCHMARK_LENET_LIST(DECL)
 
 typedef struct Setting {
   int size;

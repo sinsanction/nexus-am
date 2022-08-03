@@ -8,7 +8,7 @@ void LeNet5() {
 
     // layer1 c1
     //kernel size = 5*5  strides = 1  num = 6
-    kernel_mc_t *c1_ker = RandomInitKernel(5, 8, 6);
+    kernel_mc_t *c1_ker = RandomInitKernel(5, 8, 1, 6);
     image_mc_t *c1 = Convolution(input, c1_ker, 1);
     //outsize 28*28*6
 
@@ -19,7 +19,7 @@ void LeNet5() {
 
     // layer3 c3
     //kernel size = 5*5  strides = 1  num = 16
-    kernel_mc_t *c3_ker = RandomInitKernel(5, 8, 16);
+    kernel_mc_t *c3_ker = RandomInitKernel(5, 8, 6, 16);
     image_mc_t *c3 = Convolution(s2, c3_ker, 1);
     //outsize 10*10*16
 
@@ -29,7 +29,7 @@ void LeNet5() {
     //outsize 5*5*16
 
     // layer5 fc1
-    image_t *fc1_pre = Flatten(image_mc_t *s4);
+    image_t *fc1_pre = Flatten(s4);
     //outsize 1*400
     fc_filter_t *fc_filter1 = RandomInitFcFilterArray(1, 400, 8, 120);
     image_t *fc1 = Dense(fc1_pre, fc_filter1, 120);

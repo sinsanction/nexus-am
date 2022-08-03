@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-#define MAX_CHANNEL 50
+#define MAX_CHANNEL 200
 
 // full mixed-precision
 
