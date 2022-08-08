@@ -29,6 +29,9 @@ typedef struct image
   uint8_t vwidth;
   uint8_t order;         // 0: row  1: column
 
+  uint16_t scale;
+  uint16_t zero_point;
+
   void *addr;
 } image_t;
 
@@ -37,7 +40,7 @@ typedef struct kernel
   uint32_t size;
   uint8_t vwidth;
 
-  uint16_t den;
+  uint16_t scale;
 
   void *addr;
 } kernel_t;
@@ -49,7 +52,7 @@ typedef struct fc_filter
 
   uint8_t vwidth;
   uint8_t order;
-  uint16_t den;
+  uint16_t scale;
 
   void *addr;
 } fc_filter_t;
@@ -73,6 +76,18 @@ typedef struct kernel_mc
 
   kernel_t *ker[MAX_CHANNEL];
 } kernel_mc_t;
+
+typedef struct out_scale
+{
+  uint16_t scale;
+  uint16_t zero_point;
+} out_scale_t;
+
+typedef struct out_scale_mc
+{
+  uint16_t channel;
+  out_scale_t *scale;
+} out_scale_mc_t;
 
 //IO
 image_t *RandomInitImage_SC(uint32_t width, uint32_t height, uint32_t bits, uint8_t order);
@@ -103,7 +118,7 @@ image_t *Transpose(image_t *input_image);
 image_t *MergeImage(image_t *input_image_a, image_t *input_image_b);
 
 //arithmetic
-image_t *Convolution_SC(image_t *input_image, kernel_t *input_kernel, int strides);
+image_t *Convolution_SC(image_t *input_image, kernel_t *input_kernel, int strides, out_scale_t *out_scale);
 
 image_t *MaxPooling_SC(image_t *input_image, int pool_size, int strides);
 
@@ -112,7 +127,7 @@ image_t *AvgPooling_SC(image_t *input_image, int pool_size, int strides);
 image_t *Activation_SC(image_t *input_image, char *algorithm, uint16_t zero_point);
 
 
-image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides);
+image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides, out_scale_mc_t *out_scale);
 
 image_mc_t *MaxPooling(image_mc_t *input_image, int pool_size, int strides);
 
@@ -120,9 +135,9 @@ image_mc_t *AvgPooling(image_mc_t *input_image, int pool_size, int strides);
 
 image_mc_t *Activation(image_mc_t *input_image, char *algorithm, uint16_t zero_point);
 
-image_t *Flatten(image_mc_t *input_image);
+image_t *Flatten(image_mc_t *input_image, out_scale_t *out_scale, uint8_t vwidth);
 
-image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units);
+image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units, out_scale_t *out_scale);
 
 #ifdef __cplusplus
 }

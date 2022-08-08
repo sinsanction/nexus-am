@@ -4,12 +4,14 @@
 
 
 //conv
-image_t *convolution_k5(image_t *input_image, kernel_t *input_kernel, int strides) {
+image_t *convolution_k5(image_t *input_image, kernel_t *input_kernel, int strides, out_scale_t *out_scale) {
     image_t *img = (image_t *)malloc(sizeof(image_t));
     img->width = (input_image->width - 5) / strides + 1;
     img->height = (input_image->height - 5) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = out_scale->scale;
+    img->zero_point = out_scale->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -43,7 +45,8 @@ image_t *convolution_k5(image_t *input_image, kernel_t *input_kernel, int stride
                 LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth_main), 5, 3, 0);
                 LoadV_D_Main(add_addr64(col_ptr, input_image->height*4, vwidth_main), 5, 4, 0);
                 temp = Conv(5);
-                temp = temp / input_kernel->den;
+                temp = temp / input_kernel->scale;
+                temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
                 put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
             }
         }
@@ -58,7 +61,8 @@ image_t *convolution_k5(image_t *input_image, kernel_t *input_kernel, int stride
             LoadV_D_Main(add_addr64(col_ptr, input_image->height*4, vwidth_main), 5, 4, 0);
             col_ptr = add_addr64(col_ptr, input_image->height*5, vwidth_main);
             temp = Conv(5);
-            temp = temp / input_kernel->den;
+            temp = temp / input_kernel->scale;
+            temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
             put_main_value(img_data, i, vwidth_main, handle_overflow(temp, vwidth_main));
 
             for (int j=1; j<width; j++) {
@@ -67,7 +71,8 @@ image_t *convolution_k5(image_t *input_image, kernel_t *input_kernel, int stride
                     col_ptr = add_addr64(col_ptr, input_image->height, vwidth_main);
                 }
                 temp = Conv(5);
-                temp = temp / input_kernel->den;
+                temp = temp / input_kernel->scale;
+                temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
                 put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
             }
         }
@@ -77,12 +82,14 @@ image_t *convolution_k5(image_t *input_image, kernel_t *input_kernel, int stride
     return img;
 }
 
-image_t *convolution_k4(image_t *input_image, kernel_t *input_kernel, int strides) {
+image_t *convolution_k4(image_t *input_image, kernel_t *input_kernel, int strides, out_scale_t *out_scale) {
     image_t *img = (image_t *)malloc(sizeof(image_t));
     img->width = (input_image->width - 4) / strides + 1;
     img->height = (input_image->height - 4) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = out_scale->scale;
+    img->zero_point = out_scale->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -114,7 +121,8 @@ image_t *convolution_k4(image_t *input_image, kernel_t *input_kernel, int stride
                 LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 4, 2, 0);
                 LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth_main), 4, 3, 0);
                 temp = Conv(4);
-                temp = temp / input_kernel->den;
+                temp = temp / input_kernel->scale;
+                temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
                 put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
             }
         }
@@ -128,7 +136,8 @@ image_t *convolution_k4(image_t *input_image, kernel_t *input_kernel, int stride
             LoadV_D_Main(add_addr64(col_ptr, input_image->height*3, vwidth_main), 4, 3, 0);
             col_ptr = add_addr64(col_ptr, input_image->height*4, vwidth_main);
             temp = Conv(4);
-            temp = temp / input_kernel->den;
+            temp = temp / input_kernel->scale;
+            temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
             put_main_value(img_data, i, vwidth_main, handle_overflow(temp, vwidth_main));
 
             for (int j=1; j<width; j++) {
@@ -137,7 +146,8 @@ image_t *convolution_k4(image_t *input_image, kernel_t *input_kernel, int stride
                     col_ptr = add_addr64(col_ptr, input_image->height, vwidth_main);
                 }
                 temp = Conv(4);
-                temp = temp / input_kernel->den;
+                temp = temp / input_kernel->scale;
+                temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
                 put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
             }
         }
@@ -147,12 +157,14 @@ image_t *convolution_k4(image_t *input_image, kernel_t *input_kernel, int stride
     return img;
 }
 
-image_t *convolution_k3(image_t *input_image, kernel_t *input_kernel, int strides) {
+image_t *convolution_k3(image_t *input_image, kernel_t *input_kernel, int strides, out_scale_t *out_scale) {
     image_t *img = (image_t *)malloc(sizeof(image_t));
     img->width = (input_image->width - 3) / strides + 1;
     img->height = (input_image->height - 3) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = out_scale->scale;
+    img->zero_point = out_scale->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -182,7 +194,8 @@ image_t *convolution_k3(image_t *input_image, kernel_t *input_kernel, int stride
                 LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 3, 1, 0);
                 LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 3, 2, 0);
                 temp = Conv(3);
-                temp = temp / input_kernel->den;
+                temp = temp / input_kernel->scale;
+                temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
                 put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
             }
         }
@@ -195,7 +208,8 @@ image_t *convolution_k3(image_t *input_image, kernel_t *input_kernel, int stride
             LoadV_D_Main(add_addr64(col_ptr, input_image->height*2, vwidth_main), 3, 2, 0);
             col_ptr = add_addr64(col_ptr, input_image->height*3, vwidth_main);
             temp = Conv(3);
-            temp = temp / input_kernel->den;
+            temp = temp / input_kernel->scale;
+            temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
             put_main_value(img_data, i, vwidth_main, handle_overflow(temp, vwidth_main));
 
             for (int j=1; j<width; j++) {
@@ -204,7 +218,8 @@ image_t *convolution_k3(image_t *input_image, kernel_t *input_kernel, int stride
                     col_ptr = add_addr64(col_ptr, input_image->height, vwidth_main);
                 }
                 temp = Conv(3);
-                temp = temp / input_kernel->den;
+                temp = temp / input_kernel->scale;
+                temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
                 put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
             }
         }
@@ -214,12 +229,14 @@ image_t *convolution_k3(image_t *input_image, kernel_t *input_kernel, int stride
     return img;
 }
 
-image_t *convolution_k2(image_t *input_image, kernel_t *input_kernel, int strides) {
+image_t *convolution_k2(image_t *input_image, kernel_t *input_kernel, int strides, out_scale_t *out_scale) {
     image_t *img = (image_t *)malloc(sizeof(image_t));
     img->width = (input_image->width - 2) / strides + 1;
     img->height = (input_image->height - 2) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = out_scale->scale;
+    img->zero_point = out_scale->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -247,7 +264,8 @@ image_t *convolution_k2(image_t *input_image, kernel_t *input_kernel, int stride
                 LoadV_D_Main(col_ptr, 2, 0, 0);
                 LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 2, 1, 0);
                 temp = Conv(2);
-                temp = temp / input_kernel->den;
+                temp = temp / input_kernel->scale;
+                temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
                 put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
             }
         }
@@ -259,14 +277,16 @@ image_t *convolution_k2(image_t *input_image, kernel_t *input_kernel, int stride
             LoadV_D_Main(add_addr64(col_ptr, input_image->height,   vwidth_main), 2, 1, 0);
             col_ptr = add_addr64(col_ptr, input_image->height*2, vwidth_main);
             temp = Conv(2);
-            temp = temp / input_kernel->den;
+            temp = temp / input_kernel->scale;
+            temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
             put_main_value(img_data, i, vwidth_main, handle_overflow(temp, vwidth_main));
 
             for (int j=1; j<width; j++) {
                 LoadV_P(col_ptr, 2, 0);
                 col_ptr = add_addr64(col_ptr, input_image->height, vwidth_main);
                 temp = Conv(2);
-                temp = temp / input_kernel->den;
+                temp = temp / input_kernel->scale;
+                temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
                 put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
             }
         }
@@ -276,12 +296,14 @@ image_t *convolution_k2(image_t *input_image, kernel_t *input_kernel, int stride
     return img;
 }
 
-image_t *convolution_k1(image_t *input_image, kernel_t *input_kernel, int strides) {
+image_t *convolution_k1(image_t *input_image, kernel_t *input_kernel, int strides, out_scale_t *out_scale) {
     image_t *img = (image_t *)malloc(sizeof(image_t));
     img->width = (input_image->width - 1) / strides + 1;
     img->height = (input_image->height - 1) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = out_scale->scale;
+    img->zero_point = out_scale->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -306,7 +328,8 @@ image_t *convolution_k1(image_t *input_image, kernel_t *input_kernel, int stride
             col_ptr = get_addr64(inimg_data, j * strides * input_image->height + i * strides, vwidth_main);
             LoadV_D_Main(col_ptr, 1, 0, 0);
             temp = Conv(1);
-            temp = temp / input_kernel->den;
+            temp = temp / input_kernel->scale;
+            temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
             put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
         }
     }
@@ -315,26 +338,26 @@ image_t *convolution_k1(image_t *input_image, kernel_t *input_kernel, int stride
     return img;
 }
 
-image_t *Convolution_SC(image_t *input_image, kernel_t *input_kernel, int strides) {
+image_t *Convolution_SC(image_t *input_image, kernel_t *input_kernel, int strides, out_scale_t *out_scale) {
 
     assert((input_kernel->size <= input_image->width) && (input_kernel->size <= input_image->height));
     assert((input_kernel->size <= 5) && (input_kernel->size >= 1));
-    assert(input_kernel->den != 0);
+    assert(input_kernel->scale != 0);
     assert(input_image->order == 1);
     assert((input_image->vwidth == 0x80) || (input_image->vwidth == 0x40) || (input_image->vwidth == 0x20) || (input_image->vwidth == 0x10));
     assert((input_kernel->vwidth == 0x8) || (input_kernel->vwidth == 0x4) || (input_kernel->vwidth == 0x2) || (input_kernel->vwidth == 0x1));
 
     switch (input_kernel->size) {
         case 5:
-            return convolution_k5(input_image, input_kernel, strides);
+            return convolution_k5(input_image, input_kernel, strides, out_scale);
         case 4:
-            return convolution_k4(input_image, input_kernel, strides);
+            return convolution_k4(input_image, input_kernel, strides, out_scale);
         case 3:
-            return convolution_k3(input_image, input_kernel, strides);
+            return convolution_k3(input_image, input_kernel, strides, out_scale);
         case 2:
-            return convolution_k2(input_image, input_kernel, strides);
+            return convolution_k2(input_image, input_kernel, strides, out_scale);
         case 1:
-            return convolution_k1(input_image, input_kernel, strides);
+            return convolution_k1(input_image, input_kernel, strides, out_scale);
         default:
             return NULL;
     }
@@ -347,6 +370,8 @@ image_t *maxpooling_k5(image_t *input_image, int strides) {
     img->height = (input_image->height - 5) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -408,6 +433,8 @@ image_t *maxpooling_k4(image_t *input_image, int strides) {
     img->height = (input_image->height - 4) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -467,6 +494,8 @@ image_t *maxpooling_k3(image_t *input_image, int strides) {
     img->height = (input_image->height - 3) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -524,6 +553,8 @@ image_t *maxpooling_k2(image_t *input_image, int strides) {
     img->height = (input_image->height - 2) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -577,6 +608,8 @@ image_t *maxpooling_k1(image_t *input_image, int strides) {
     img->height = (input_image->height - 1) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -634,6 +667,8 @@ image_t *avgpooling_k5(image_t *input_image, int strides) {
     img->height = (input_image->height - 5) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -695,6 +730,8 @@ image_t *avgpooling_k4(image_t *input_image, int strides) {
     img->height = (input_image->height - 4) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -754,6 +791,8 @@ image_t *avgpooling_k3(image_t *input_image, int strides) {
     img->height = (input_image->height - 3) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -811,6 +850,8 @@ image_t *avgpooling_k2(image_t *input_image, int strides) {
     img->height = (input_image->height - 2) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -864,6 +905,8 @@ image_t *avgpooling_k1(image_t *input_image, int strides) {
     img->height = (input_image->height - 1) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -925,6 +968,8 @@ image_t *Activation_SC(image_t *input_image, char *algorithm, uint16_t zero_poin
     img->height = input_image->height;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = input_image->width;
     int height = input_image->height;
@@ -971,9 +1016,10 @@ image_t *Activation_SC(image_t *input_image, char *algorithm, uint16_t zero_poin
 }
 
 //multi channel
-image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides) {
+image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides, out_scale_mc_t *out_scale) {
 
     assert(input_image->channel == input_kernel->in_channel);
+    assert(input_kernel->out_channel == out_scale->channel);
 
     image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
     img_mc->width = (input_image->width - input_kernel->size) / strides + 1;
@@ -994,7 +1040,7 @@ image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int 
     for (int i=0; i<img_mc->channel; i++) {
         for (int j=0; j<input_image->channel; j++) {
             curr_kernel = input_kernel->ker[i*input_kernel->in_channel+j];
-            img_tmp[j] = Convolution_SC(input_image->img[j], curr_kernel, strides);
+            img_tmp[j] = Convolution_SC(input_image->img[j], curr_kernel, strides, &(out_scale->scale[i]));
         }
 
         //merge all channel
@@ -1003,6 +1049,8 @@ image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int 
         new_img->height = img_mc->height;
         new_img->vwidth = vwidth_max;
         new_img->order = 1;
+        new_img->scale = out_scale->scale[i].scale;
+        new_img->zero_point = out_scale->scale[i].zero_point;
 
         int size = round_up_div(new_img->width * new_img->height * (vwidth_max >> 3), 64);
         uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
@@ -1011,8 +1059,9 @@ image_mc_t *Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int 
             for (int i=0; i<new_img->height; i++) {
                 temp = 0;
                 for (int l=0; l<input_image->channel; l++) {
-                    temp += get_main_value((uint64_t *)(img_tmp[l]->addr), j * new_img->height + i, img_tmp[l]->vwidth);
+                    temp += (get_main_value((uint64_t *)(img_tmp[l]->addr), j * new_img->height + i, img_tmp[l]->vwidth) - img_tmp[l]->zero_point);
                 }
+                temp = temp + new_img->zero_point;
                 temp = handle_overflow(temp, vwidth_max);
                 put_main_value(img_data, j * new_img->height + i, vwidth_max, temp);
             }
@@ -1076,13 +1125,15 @@ image_mc_t *Activation(image_mc_t *input_image, char *algorithm, uint16_t zero_p
 }
 
 //fully connected
-image_t *Flatten(image_mc_t *input_image) {
+image_t *Flatten(image_mc_t *input_image, out_scale_t *out_scale, uint8_t vwidth) {
 
     image_t *img = (image_t *)malloc(sizeof(image_t));
     img->width = 1;
     img->height = input_image->width * input_image->height * input_image->channel;
-    img->vwidth = input_image->img[0]->vwidth;
+    img->vwidth = vwidth;
     img->order = input_image->order;
+    img->scale = out_scale->scale;
+    img->zero_point = out_scale->zero_point;
 
     int size = round_up_div(img->height * (img->vwidth >> 3), 64);
     uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
@@ -1091,7 +1142,8 @@ image_t *Flatten(image_mc_t *input_image) {
         for (int j=0; j<input_image->width; j++) {
             for (int i=0; i<input_image->height; i++) {
                 uint16_t temp = get_main_value((uint64_t *)(input_image->img[c]->addr), j * input_image->height + i, input_image->img[c]->vwidth);
-                put_main_value(img_data, c * input_image->width * input_image->height + j * input_image->width + i, img->vwidth, temp);
+                temp = re_scale(temp, input_image->img[c]->scale, input_image->img[c]->zero_point, out_scale->scale, out_scale->zero_point);
+                put_main_value(img_data, c * input_image->width * input_image->height + j * input_image->width + i, img->vwidth, handle_overflow(temp, vwidth));
             }
         }
     }
@@ -1100,18 +1152,20 @@ image_t *Flatten(image_mc_t *input_image) {
     return img;
 }
 
-image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units) {
+image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units, out_scale_t *out_scale) {
 
     assert(input_image->width == fc_filter_array[0].width);
     assert(input_image->height == fc_filter_array[0].height);
     assert(input_image->order == fc_filter_array[0].order);
-    assert(fc_filter_array[0].den != 0);
+    assert(fc_filter_array[0].scale != 0);
 
     image_t *img = (image_t *)malloc(sizeof(image_t));
     img->width = 1;
     img->height = units;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = out_scale->scale;
+    img->zero_point = out_scale->zero_point;
 
     int size = round_up_div(img->height * (img->vwidth >> 3), 64);
     uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
@@ -1135,8 +1189,8 @@ image_t *Dense(image_t *input_image, fc_filter_t *fc_filter_array, int units) {
             }
         }
 
-        temp = temp / fc_filter_array[u].den;
-        temp = (temp < 0) ? 0 : temp;
+        temp = temp / fc_filter_array[u].scale;
+        temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
         temp = handle_overflow(temp, vwidth_main);
         put_main_value(img_data, u, vwidth_main, temp);
     }
