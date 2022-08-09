@@ -40,6 +40,7 @@ image_t *StdIns_Convolution_SC(image_t *input_image, kernel_t *input_kernel, int
                     temp += get_main_value(inimg_data, (j * strides + sj) * input_image->height + (i * strides + si), vwidth_main) * get_kernel_value(inker_data, si * k + sj, vwidth_kernel);
                 }
             }
+            temp = (temp < 0) ? 0 : temp;
             temp = temp / input_kernel->scale;
             temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
             put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));

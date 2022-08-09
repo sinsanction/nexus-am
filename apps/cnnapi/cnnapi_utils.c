@@ -60,8 +60,8 @@ image_t *MergeImage(image_t *input_image_a, image_t *input_image_b) {
   img->height = height;
   img->vwidth = vwidth;
   img->order = input_image_a->order;
-  img->scale = input_image->scale;
-  img->zero_point = input_image->zero_point;
+  img->scale = input_image_a->scale;
+  img->zero_point = input_image_a->zero_point;
 
   int size = round_up_div(width * height * (vwidth >> 3), 64);
   uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);

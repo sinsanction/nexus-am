@@ -42,6 +42,7 @@ image_mp_t *StdIns_Convolution_MP_SC(image_mp_t *input_image, kernel_mp_t *input
                     temp += get_main_value((uint64_t *)(input_image->addr[j * strides + sj]), i * strides + si, input_image->vwidth[j * strides + sj]) * get_kernel_value((uint64_t *)(input_kernel->addr[si]), sj, input_kernel->vwidth[si]);
                 }
             }
+            temp = (temp < 0) ? 0 : temp;
             temp = temp / input_kernel->scale;
             temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
             put_main_value((uint64_t *)(img->addr[j]), i, img->vwidth[j], handle_overflow(temp, img->vwidth[j]));
