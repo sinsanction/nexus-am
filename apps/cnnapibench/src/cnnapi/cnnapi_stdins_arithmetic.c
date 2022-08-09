@@ -3,11 +3,11 @@
 
 
 //conv
-image_t *StdIns_Convolution_SC(image_t *input_image, kernel_t *input_kernel, int strides) {
+image_t *StdIns_Convolution_SC(image_t *input_image, kernel_t *input_kernel, int strides, out_scale_t *out_scale) {
 
     assert((input_kernel->size <= input_image->width) && (input_kernel->size <= input_image->height));
     assert((input_kernel->size <= 5) && (input_kernel->size >= 1));
-    assert(input_kernel->den != 0);
+    assert(input_kernel->scale != 0);
     assert(input_image->order == 1);
     assert((input_image->vwidth == 0x80) || (input_image->vwidth == 0x40) || (input_image->vwidth == 0x20) || (input_image->vwidth == 0x10));
     assert((input_kernel->vwidth == 0x8) || (input_kernel->vwidth == 0x4) || (input_kernel->vwidth == 0x2) || (input_kernel->vwidth == 0x1));
@@ -17,6 +17,8 @@ image_t *StdIns_Convolution_SC(image_t *input_image, kernel_t *input_kernel, int
     img->height = (input_image->height - input_kernel->size) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = out_scale->scale;
+    img->zero_point = out_scale->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -39,7 +41,8 @@ image_t *StdIns_Convolution_SC(image_t *input_image, kernel_t *input_kernel, int
                 }
             }
             temp = (temp < 0) ? 0 : temp;
-            temp = temp / input_kernel->den;
+            temp = temp / input_kernel->scale;
+            temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
             put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
         }
     }
@@ -61,6 +64,8 @@ image_t *StdIns_MaxPooling_SC(image_t *input_image, int pool_size, int strides) 
     img->height = (input_image->height - pool_size) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -102,6 +107,8 @@ image_t *StdIns_AvgPooling_SC(image_t *input_image, int pool_size, int strides) 
     img->height = (input_image->height - pool_size) / strides + 1;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = img->width;
     int height = img->height;
@@ -143,6 +150,8 @@ image_t *StdIns_Activation_SC(image_t *input_image, char *algorithm, uint16_t ze
     img->height = input_image->height;
     img->vwidth = input_image->vwidth;
     img->order = input_image->order;
+    img->scale = input_image->scale;
+    img->zero_point = input_image->zero_point;
 
     int width = input_image->width;
     int height = input_image->height;
@@ -163,9 +172,10 @@ image_t *StdIns_Activation_SC(image_t *input_image, char *algorithm, uint16_t ze
 }
 
 //multi channel
-image_mc_t *StdIns_Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides) {
+image_mc_t *StdIns_Convolution(image_mc_t *input_image, kernel_mc_t *input_kernel, int strides, out_scale_mc_t *out_scale) {
 
     assert(input_image->channel == input_kernel->in_channel);
+    assert(input_kernel->out_channel == out_scale->channel);
 
     image_mc_t *img_mc = (image_mc_t *)malloc(sizeof(image_mc_t));
     img_mc->width = (input_image->width - input_kernel->size) / strides + 1;
@@ -186,7 +196,7 @@ image_mc_t *StdIns_Convolution(image_mc_t *input_image, kernel_mc_t *input_kerne
     for (int i=0; i<img_mc->channel; i++) {
         for (int j=0; j<input_image->channel; j++) {
             curr_kernel = input_kernel->ker[i*input_kernel->in_channel+j];
-            img_tmp[j] = StdIns_Convolution_SC(input_image->img[j], curr_kernel, strides);
+            img_tmp[j] = StdIns_Convolution_SC(input_image->img[j], curr_kernel, strides, &(out_scale->scale[i]));
         }
 
         //merge all channel
@@ -195,6 +205,8 @@ image_mc_t *StdIns_Convolution(image_mc_t *input_image, kernel_mc_t *input_kerne
         new_img->height = img_mc->height;
         new_img->vwidth = vwidth_max;
         new_img->order = 1;
+        new_img->scale = out_scale->scale[i].scale;
+        new_img->zero_point = out_scale->scale[i].zero_point;
 
         int size = round_up_div(new_img->width * new_img->height * (vwidth_max >> 3), 64);
         uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
@@ -203,8 +215,9 @@ image_mc_t *StdIns_Convolution(image_mc_t *input_image, kernel_mc_t *input_kerne
             for (int i=0; i<new_img->height; i++) {
                 temp = 0;
                 for (int l=0; l<input_image->channel; l++) {
-                    temp += get_main_value((uint64_t *)(img_tmp[l]->addr), j * new_img->height + i, img_tmp[l]->vwidth);
+                    temp += (get_main_value((uint64_t *)(img_tmp[l]->addr), j * new_img->height + i, img_tmp[l]->vwidth) - img_tmp[l]->zero_point);
                 }
+                temp = temp + new_img->zero_point;
                 temp = handle_overflow(temp, vwidth_max);
                 put_main_value(img_data, j * new_img->height + i, vwidth_max, temp);
             }

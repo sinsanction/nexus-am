@@ -9,18 +9,23 @@ image_t *RandomInitImage_SC(uint32_t width, uint32_t height, uint32_t bits, uint
   img->width = width;
   img->height = height;
   img->order = order;
+  img->zero_point = 0;
 
   if (bits == 16) {
     img->vwidth = 0x80;
+    img->scale = 32768;
   }
   else if (bits == 8) {
     img->vwidth = 0x40;
+    img->scale = 128;
   }
   else if (bits == 4) {
     img->vwidth = 0x20;
+    img->scale = 8;
   }
   else if (bits == 2) {
     img->vwidth = 0x10;
+    img->scale = 2;
   }
   else {
     free(img);
@@ -46,19 +51,19 @@ kernel_t *RandomInitKernel_SC(uint32_t k, uint32_t bits) {
 
   if (bits == 8) {
     kernel->vwidth = 0x8;
-    kernel->den = 128;
+    kernel->scale = 128;
   }
   else if (bits == 4) {
     kernel->vwidth = 0x4;
-    kernel->den = 8;
+    kernel->scale = 8;
   }
   else if (bits == 2) {
     kernel->vwidth = 0x2;
-    kernel->den = 2;
+    kernel->scale = 2;
   }
   else if (bits == 1) {
     kernel->vwidth = 0x1;
-    kernel->den = 1;
+    kernel->scale = 1;
   }
   else {
     free(kernel);
@@ -125,19 +130,19 @@ fc_filter_t *RandomInitFcFilter(uint32_t width, uint32_t height, uint32_t bits) 
 
   if (bits == 8) {
     fc->vwidth = 0x8;
-    fc->den = 128;
+    fc->scale = 128;
   }
   else if (bits == 4) {
     fc->vwidth = 0x4;
-    fc->den = 8;
+    fc->scale = 8;
   }
   else if (bits == 2) {
     fc->vwidth = 0x2;
-    fc->den = 2;
+    fc->scale = 2;
   }
   else if (bits == 1) {
     fc->vwidth = 0x1;
-    fc->den = 1;
+    fc->scale = 1;
   }
   else {
     free(fc);
@@ -174,7 +179,7 @@ void SetOutput_SC(image_t *output_image) {
   uint8_t vwidth = output_image->vwidth;
   uint64_t *img_addr = output_image->addr;
 
-  printf("width: %d, height: %d, vwidth: %#x, order: %d\n", width, height, vwidth, output_image->order);
+  printf("width: %d, height: %d, vwidth: %#x, order: %d, scale: %d, zero: %d\n", width, height, vwidth, output_image->order, output_image->scale, output_image->zero_point);
 
   if (output_image->order == 0) {
     for (int i=0; i<height; i++) {
@@ -200,7 +205,7 @@ void SetOutputKernel_SC(kernel_t *output_kernel) {
   uint8_t vwidth = output_kernel->vwidth;
   uint64_t *kernel_addr = output_kernel->addr;
 
-  printf("k: %d, vwidth: %#x, den: %d\n", k, vwidth, output_kernel->den);
+  printf("k: %d, vwidth: %#x, scale: %d\n", k, vwidth, output_kernel->scale);
 
   for (int i=0; i<k; i++) {
     for (int j=0; j<k; j++) {
@@ -240,7 +245,7 @@ void SetOutputFcFilter(fc_filter_t *output_fc_filter) {
   uint8_t vwidth = output_fc_filter->vwidth;
   uint64_t *img_addr = output_fc_filter->addr;
 
-  printf("\nwidth: %d, height: %d, vwidth: %#x, order: %d, den: %d\n", width, height, vwidth, output_fc_filter->order, output_fc_filter->den);
+  printf("\nwidth: %d, height: %d, vwidth: %#x, order: %d, scale: %d\n", width, height, vwidth, output_fc_filter->order, output_fc_filter->scale);
 
   if (output_fc_filter->order == 0) {
     for (int i=0; i<height; i++) {

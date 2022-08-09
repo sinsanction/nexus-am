@@ -11,6 +11,7 @@ static int w = 30;
 static int h = 30;
 static int k = 4;
 static int strides = 2;
+static out_scale_t out_scale;
 
 static int test_pass;
 
@@ -18,12 +19,14 @@ void bench_conv2_v2_prepare() {
   bench_srand(1);
   A = RandomInitImage_MP_SC(w, h);
   kernel = RandomInitKernel_MP_SC(k);
+  out_scale.scale = A->scale / 2;
+  out_scale.zero_point = 1;
   test_pass = 1;
 }
 
 void bench_conv2_v2_run() {
-  B = Convolution_MP_SC(A, kernel, strides);
-  C = StdIns_Convolution_MP_SC(A, kernel, strides);
+  B = Convolution_MP_SC(A, kernel, strides, &out_scale);
+  C = StdIns_Convolution_MP_SC(A, kernel, strides, &out_scale);
 }
 
 int bench_conv2_v2_validate() {

@@ -12,6 +12,8 @@ image_mp_t *RandomInitImage_MP_SC(uint32_t width, uint32_t height) {
   int vwidth_size = round_up_div(width, 8);
   img->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
   img->addr = (void **)malloc(sizeof(void *) * width);
+  img->zero_point = 0;
+  int scale_max = 0;
 
   for (int i=0; i<width; i++) {
     int random_bits = rand() % 4;
@@ -19,18 +21,22 @@ image_mp_t *RandomInitImage_MP_SC(uint32_t width, uint32_t height) {
     if (random_bits == 3) {
       bits = 16;
       img->vwidth[i] = 0x80;
+      scale_max = 32768;
     }
     else if (random_bits == 2) {
       bits = 8;
       img->vwidth[i] = 0x40;
+      scale_max = (scale_max >= 128) ? scale_max : 128;
     }
     else if (random_bits == 1) {
       bits = 4;
       img->vwidth[i] = 0x20;
+      scale_max = (scale_max >= 8) ? scale_max : 8;
     }
     else {
       bits = 2;
       img->vwidth[i] = 0x10;
+      scale_max = (scale_max >= 2) ? scale_max : 2;
     }
 
     int size = round_up_div(height * bits, 64);
@@ -42,6 +48,7 @@ image_mp_t *RandomInitImage_MP_SC(uint32_t width, uint32_t height) {
     }
     img->addr[i] = (void *)img_data;
   }
+  img->scale = scale_max;
 
   return img;
 }
@@ -54,7 +61,7 @@ kernel_mp_t *RandomInitKernel_MP_SC(uint32_t k) {
   int vwidth_size = round_up_div(k, 8);
   kernel->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
   kernel->addr = (void **)malloc(sizeof(void *) * k);
-  int den_max = 0;
+  int scale_max = 0;
 
   for (int i=0; i<k; i++) {
     int random_bits = rand() % 4;
@@ -62,22 +69,22 @@ kernel_mp_t *RandomInitKernel_MP_SC(uint32_t k) {
     if (random_bits == 3) {
       bits = 8;
       kernel->vwidth[i] = 0x8;
-      den_max = 128;
+      scale_max = 128;
     }
     else if (random_bits == 2) {
       bits = 4;
       kernel->vwidth[i] = 0x4;
-      den_max = (den_max >= 8) ? den_max : 8;
+      scale_max = (scale_max >= 8) ? scale_max : 8;
     }
     else if (random_bits == 1) {
       bits = 2;
       kernel->vwidth[i] = 0x2;
-      den_max = (den_max >= 2) ? den_max : 2;
+      scale_max = (scale_max >= 2) ? scale_max : 2;
     }
     else {
       bits = 1;
       kernel->vwidth[i] = 0x1;
-      den_max = (den_max >= 1) ? den_max : 1;
+      scale_max = (scale_max >= 1) ? scale_max : 1;
     }
 
     int size = round_up_div(k * bits, 64);
@@ -89,7 +96,7 @@ kernel_mp_t *RandomInitKernel_MP_SC(uint32_t k) {
     }
     kernel->addr[i] = (void *)kernel_data;
   }
-  kernel->den = den_max;
+  kernel->scale = scale_max;
 
   return kernel;
 }
@@ -131,7 +138,7 @@ fc_filter_mp_t *RandomInitFcFilter_MP(uint32_t width, uint32_t height) {
   int vwidth_size = round_up_div(width, 8);
   fc->vwidth = (uint8_t *)malloc(sizeof(uint64_t) * vwidth_size);
   fc->addr = (void **)malloc(sizeof(void *) * width);
-  int den_max = 0;
+  int scale_max = 0;
 
   for (int i=0; i<width; i++) {
     int random_bits = rand() % 4;
@@ -139,22 +146,22 @@ fc_filter_mp_t *RandomInitFcFilter_MP(uint32_t width, uint32_t height) {
     if (random_bits == 3) {
       bits = 8;
       fc->vwidth[i] = 0x8;
-      den_max = 128;
+      scale_max = 128;
     }
     else if (random_bits == 2) {
       bits = 4;
       fc->vwidth[i] = 0x4;
-      den_max = (den_max >= 8) ? den_max : 8;
+      scale_max = (scale_max >= 8) ? scale_max : 8;
     }
     else if (random_bits == 1) {
       bits = 2;
       fc->vwidth[i] = 0x2;
-      den_max = (den_max >= 2) ? den_max : 2;
+      scale_max = (scale_max >= 2) ? scale_max : 2;
     }
     else {
       bits = 1;
       fc->vwidth[i] = 0x1;
-      den_max = (den_max >= 1) ? den_max : 1;
+      scale_max = (scale_max >= 1) ? scale_max : 1;
     }
 
     int size = round_up_div(height * bits, 64);
@@ -166,7 +173,7 @@ fc_filter_mp_t *RandomInitFcFilter_MP(uint32_t width, uint32_t height) {
     }
     fc->addr[i] = (void *)fc_data;
   }
-  fc->den = den_max;
+  fc->scale = scale_max;
 
   return fc;
 }
@@ -187,7 +194,7 @@ void SetOutput_MP_SC(image_mp_t *output_image) {
   int width = output_image->width;
   int height = output_image->height;
 
-  printf("width: %d, height: %d\n", width, height);
+  printf("width: %d, height: %d, scale: %d, zero: %d\n", width, height, output_image->scale, output_image->zero_point);
 
   for (int i=0; i<height; i++) {
     for (int j=0; j<width; j++) {
@@ -201,7 +208,7 @@ void SetOutputKernel_MP_SC(kernel_mp_t *output_kernel) {
 
   int k = output_kernel->size;
 
-  printf("k: %d, den: %d\n", k, output_kernel->den);
+  printf("k: %d, scale: %d\n", k, output_kernel->scale);
 
   for (int i=0; i<k; i++) {
     for (int j=0; j<k; j++) {
@@ -239,7 +246,7 @@ void SetOutputFcFilter_MP(fc_filter_mp_t *output_fc_filter) {
   int width = output_fc_filter->width;
   int height = output_fc_filter->height;
 
-  printf("\nwidth: %d, height: %d, den: %d\n", width, height, output_fc_filter->den);
+  printf("\nwidth: %d, height: %d, scale: %d\n", width, height, output_fc_filter->scale);
 
   for (int i=0; i<height; i++) {
     for (int j=0; j<width; j++) {

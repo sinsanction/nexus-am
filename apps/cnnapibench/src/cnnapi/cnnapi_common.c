@@ -228,3 +228,7 @@ uint16_t handle_overflow(uint32_t tmp, uint8_t vwidth) {
     }
 }
 
+inline int re_scale(int old_value, uint16_t old_scale, uint16_t old_zero, uint16_t new_scale, uint16_t new_zero) {
+  int new_value = (old_value - old_zero) * new_scale / old_scale + new_zero;
+  return (new_value < 0) ? 0 : new_value;
+}

@@ -13,6 +13,7 @@ static int k = 3;
 static int strides = 2;
 static int in_channel = 3;
 static int out_channel = 2;
+static out_scale_mc_t out_scale;
 
 static int test_pass;
 
@@ -20,13 +21,19 @@ void bench_conv4_prepare() {
   bench_srand(1);
   A = RandomInitImage(w, h, 2, in_channel);
   kernel = RandomInitKernel(k, 1, in_channel, out_channel);
+  out_scale.channel = out_channel;
+  out_scale.scale = (out_scale_t *)malloc(sizeof(out_scale_t) * out_channel);
+  for (int i=0; i<out_channel; i++) {
+    out_scale.scale[i].scale = A->img[0]->scale / 2;
+    out_scale.scale[i].zero_point = 1;
+  }
   test_pass = 1;
   SetOutputKernel(kernel);
 }
 
 void bench_conv4_run() {
-  B = Convolution(A, kernel, strides);
-  C = StdIns_Convolution(A, kernel, strides);
+  B = Convolution(A, kernel, strides, &out_scale);
+  C = StdIns_Convolution(A, kernel, strides, &out_scale);
 }
 
 int bench_conv4_validate() {
