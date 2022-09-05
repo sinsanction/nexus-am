@@ -128,6 +128,7 @@ fc_filter_t *RandomInitFcFilter(uint32_t width, uint32_t height, uint32_t bits) 
   fc->width = width;
   fc->height = height;
   fc->order = 1;
+  fc->bias = 0;
 
   if (bits == 8) {
     fc->vwidth = 0x8;
@@ -261,7 +262,7 @@ kernel_t *InitKernel_SC(uint32_t k, uint32_t bits, uint16_t scale, int bias, voi
 
   int size = round_up_div(k * k * bits, 64);
   uint64_t *kernel_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
-  memcpy(img_data, src, round_up_div(k * k * bits, 8));
+  memcpy(kernel_data, src, round_up_div(k * k * bits, 8));
   kernel->addr = (void *)kernel_data;
 
   return kernel;
@@ -288,6 +289,8 @@ kernel_mc_t *InitKernel(uint32_t k, uint32_t bits, uint16_t in_channel, uint16_t
 
 fc_filter_t *InitFcFilter(uint32_t width, uint32_t height, uint32_t bits, uint16_t scale, int bias, void *src) {
 
+  assert(width == 1);
+
   fc_filter_t *fc = (fc_filter_t *)malloc(sizeof(fc_filter_t));
   fc->width = width;
   fc->height = height;
@@ -313,16 +316,8 @@ fc_filter_t *InitFcFilter(uint32_t width, uint32_t height, uint32_t bits, uint16
   }
 
   int size = round_up_div(width * height * bits, 64);
-  uint64_t *fc_data_0 = (uint64_t *)malloc(sizeof(uint64_t) * size);
-  memcpy(fc_data_0, src, round_up_div(width * height * bits, 8));
   uint64_t *fc_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
-  for (int i=0; i<height; i++) {
-    for (int j=0; j<width; j++) {
-      uint16_t temp = get_main_value(fc_data_0, i * width + j, fc->vwidth);
-      put_main_value(fc_data, j * height + i, fc->vwidth, temp);
-    }
-  }
-  free(fc_data_0);
+  memcpy(fc_data, src, round_up_div(width * height * bits, 8));
   fc->addr = (void *)fc_data;
 
   return fc;
@@ -373,7 +368,7 @@ void SetOutputKernel_SC(kernel_t *output_kernel) {
   uint8_t vwidth = output_kernel->vwidth;
   uint64_t *kernel_addr = output_kernel->addr;
 
-  printf("k: %d, vwidth: %#x, scale: %d\n", k, vwidth, output_kernel->scale);
+  printf("k: %d, vwidth: %#x, scale: %d, bias: %d\n", k, vwidth, output_kernel->scale, output_kernel->bias);
 
   for (int i=0; i<k; i++) {
     for (int j=0; j<k; j++) {
@@ -413,7 +408,7 @@ void SetOutputFcFilter(fc_filter_t *output_fc_filter) {
   uint8_t vwidth = output_fc_filter->vwidth;
   uint64_t *img_addr = output_fc_filter->addr;
 
-  printf("\nwidth: %d, height: %d, vwidth: %#x, order: %d, scale: %d\n", width, height, vwidth, output_fc_filter->order, output_fc_filter->scale);
+  printf("\nwidth: %d, height: %d, vwidth: %#x, order: %d, scale: %d, bias: %d\n", width, height, vwidth, output_fc_filter->order, output_fc_filter->scale, output_fc_filter->bias);
 
   if (output_fc_filter->order == 0) {
     for (int i=0; i<height; i++) {

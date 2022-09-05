@@ -99,6 +99,9 @@ void Rescale_SC(image_t *input_image, out_scale_t *out_scale) {
       put_main_value(in_addr, j * height + i, vwidth, handle_overflow(temp, vwidth));
     }
   }
+
+  input_image->scale = out_scale->scale;
+  input_image->zero_point = out_scale->zero_point;
 }
 
 void Rescale(image_mc_t *input_image, out_scale_mc_t *out_scale) {

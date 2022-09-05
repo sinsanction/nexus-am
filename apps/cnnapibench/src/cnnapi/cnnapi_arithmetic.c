@@ -1214,18 +1214,30 @@ image_t *Flatten(image_mc_t *input_image) {
     img->width = 1;
     img->height = input_image->width * input_image->height * input_image->channel;
     img->vwidth = input_image->img[0]->vwidth;
-    img->order = input_image->order;
-    img->scale = input_image->scale;
-    img->zero_point = input_image->zero_point;
+    img->order = 1;
+    img->scale = input_image->img[0]->scale;
+    img->zero_point = input_image->img[0]->zero_point;
 
     int size = round_up_div(img->height * (img->vwidth >> 3), 64);
     uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
 
-    for (int c=0; c<input_image->channel; c++) {
-        for (int j=0; j<input_image->width; j++) {
+    if (input_image->order == 0) {
+        for (int c=0; c<input_image->channel; c++) {
             for (int i=0; i<input_image->height; i++) {
-                uint16_t temp = get_main_value((uint64_t *)(input_image->img[c]->addr), j * input_image->height + i, input_image->img[c]->vwidth);
-                put_main_value(img_data, c * input_image->width * input_image->height + j * input_image->height + i, img->vwidth, temp);
+                for (int j=0; j<input_image->width; j++) {
+                    uint16_t temp = get_main_value((uint64_t *)(input_image->img[c]->addr), i * input_image->width + j, input_image->img[c]->vwidth);
+                    put_main_value(img_data, c * input_image->width * input_image->height + i * input_image->width + j, img->vwidth, temp);
+                }
+            }
+        }
+    }
+    else {
+        for (int c=0; c<input_image->channel; c++) {
+            for (int j=0; j<input_image->width; j++) {
+                for (int i=0; i<input_image->height; i++) {
+                    uint16_t temp = get_main_value((uint64_t *)(input_image->img[c]->addr), j * input_image->height + i, input_image->img[c]->vwidth);
+                    put_main_value(img_data, c * input_image->width * input_image->height + i * input_image->width + j, img->vwidth, temp);
+                }
             }
         }
     }
