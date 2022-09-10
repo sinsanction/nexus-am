@@ -22,8 +22,8 @@ static out_scale_t fc2_out_scale;
 static out_scale_t fc3_out_scale;
 
 static int test_pass;
-static int max_num[10] = {IMAGE_0_NUM, IMAGE_1_NUM, IMAGE_2_NUM, IMAGE_3_NUM, IMAGE_4_NUM
-                          IMAGE_5_NUM, IMAGE_6_NUM, IMAGE_7_NUM, IMAGE_8_NUM, IMAGE_9_NUM};
+static int total_num[10] = {IMAGE_0_NUM, IMAGE_1_NUM, IMAGE_2_NUM, IMAGE_3_NUM, IMAGE_4_NUM
+                            IMAGE_5_NUM, IMAGE_6_NUM, IMAGE_7_NUM, IMAGE_8_NUM, IMAGE_9_NUM};
 
 void bench_lenet5_real_perf_prepare() {
   bench_srand(1);
@@ -145,7 +145,9 @@ void lenet5() {
   free(fc2);
 }
 
-void output_res() {
+int right_num[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+void output_res(int num) {
   int max_value = 0;
   for (int i=0; i<output->height; i++) {
     uint16_t res_value = get_main_value((uint64_t *)(output->addr), i, output->vwidth);
@@ -157,6 +159,7 @@ void output_res() {
   for (int i=0; i<output->height; i++) {
     if (get_main_value((uint64_t *)(output->addr), i, output->vwidth) == max_value) {
       printf("%d ", i);
+      if (num == i) right_num[num]++;
     }
   }
   printf("\n");
@@ -165,15 +168,26 @@ void output_res() {
 void bench_lenet5_real_perf_run() {
   for (int i=0; i<=9; i++) {
     printf("Number #%d: \n", i);
-    for (int j=0; j<max_num[i]; j++) {
+    for (int j=0; j<total_num[i]; j++) {
       // input 28x28x1
       input = InitImage(28, 28, 8, 1, 0, 255, 0, Input_Image[i]+(28*28)*j);
       lenet5();
-      output_res();
+      output_res(i);
       free(input);
       free(output);
     }
+    printf("\n");
   }
+  printf("==================================================\n");
+  printf("Total correct number: \n");
+  int right_sum = 0;
+  int total_sum = 0;
+  for (int i=0; i<=9; i++) {
+    printf(" #%d: %d/%d, %f\n", i, right_num[i], total_num[i], right_num[i] * 1.0 / total_num[i]);
+    right_sum += right_num[i];
+    total_sum += total_num[i];
+  }
+  printf(" #total: %d/%d, %f\n", right_sum, total_sum, right_sum * 1.0 / total_sum);
 }
 
 int bench_lenet5_real_perf_validate() {
