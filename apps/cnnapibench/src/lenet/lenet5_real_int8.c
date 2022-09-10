@@ -22,7 +22,7 @@ static out_scale_t fc2_out_scale;
 static out_scale_t fc3_out_scale;
 
 static int test_pass;
-static int total_num[10] = {IMAGE_0_NUM, IMAGE_1_NUM, IMAGE_2_NUM, IMAGE_3_NUM, IMAGE_4_NUM
+static int total_num[10] = {IMAGE_0_NUM, IMAGE_1_NUM, IMAGE_2_NUM, IMAGE_3_NUM, IMAGE_4_NUM, 
                             IMAGE_5_NUM, IMAGE_6_NUM, IMAGE_7_NUM, IMAGE_8_NUM, IMAGE_9_NUM};
 
 void bench_lenet5_real_perf_prepare() {

@@ -32,6 +32,13 @@ image_t *StdIns_Convolution_SC(image_t *input_image, kernel_t *input_kernel, int
     uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
     int temp;
 
+    int ker_sum = 0;
+    for (int si=0; si<k; si++) {
+        for (int sj=0; sj<k; sj++) {
+            ker_sum += get_kernel_value(inker_data, si * k + sj, vwidth_kernel);
+        }
+    }
+
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
             temp = 0;
@@ -40,9 +47,8 @@ image_t *StdIns_Convolution_SC(image_t *input_image, kernel_t *input_kernel, int
                     temp += get_main_value(inimg_data, (j * strides + sj) * input_image->height + (i * strides + si), vwidth_main) * get_kernel_value(inker_data, si * k + sj, vwidth_kernel);
                 }
             }
-            temp = (temp < 0) ? 0 : temp;
-            temp = temp / input_kernel->scale;
-            temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
+            temp = temp - input_image->zero_point * ker_sum + input_kernel->bias;
+            temp = temp * out_scale->scale / (input_image->scale * input_kernel->scale) + out_scale->zero_point;
             put_main_value(img_data, j * height + i, vwidth_main, handle_overflow(temp, vwidth_main));
         }
     }
@@ -80,6 +86,13 @@ image_t *StdIns_Convolution_SC_Inter(image_t *input_image, kernel_t *input_kerne
     uint64_t *img_data = (uint64_t *)malloc(sizeof(uint64_t) * size);
     int temp;
 
+    int ker_sum = 0;
+    for (int si=0; si<k; si++) {
+        for (int sj=0; sj<k; sj++) {
+            ker_sum += get_kernel_value(inker_data, si * k + sj, vwidth_kernel);
+        }
+    }
+
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
             temp = 0;
@@ -88,10 +101,9 @@ image_t *StdIns_Convolution_SC_Inter(image_t *input_image, kernel_t *input_kerne
                     temp += get_main_value(inimg_data, (j * strides + sj) * input_image->height + (i * strides + si), vwidth_main) * get_kernel_value(inker_data, si * k + sj, vwidth_kernel);
                 }
             }
-            temp = (temp < 0) ? 0 : temp;
-            temp = temp / input_kernel->scale;
-            //temp = re_scale(temp, input_image->scale, input_image->zero_point, out_scale->scale, out_scale->zero_point);
-            put_main_value(img_data, j * height + i, img->vwidth, ((temp > 65535) ? 65535 : temp));
+            temp = temp - input_image->zero_point * ker_sum;
+            temp = (temp > 32767) ? 32767 : ((temp < -32767) ? -32767 : temp);
+            put_main_value(img_data, j * height + i, img->vwidth, temp);
         }
     }
 
@@ -263,10 +275,10 @@ image_mc_t *StdIns_Convolution(image_mc_t *input_image, kernel_mc_t *input_kerne
             for (int i=0; i<new_img->height; i++) {
                 temp = 0;
                 for (int l=0; l<input_image->channel; l++) {
-                    temp += get_main_value((uint64_t *)(img_tmp[l]->addr), j * new_img->height + i, img_tmp[l]->vwidth);
+                    temp += (int16_t)get_main_value((uint64_t *)(img_tmp[l]->addr), j * new_img->height + i, img_tmp[l]->vwidth);
                 }
                 temp = temp + curr_kernel->bias;
-                temp = re_scale(temp, input_image->img[0]->scale, input_image->img[0]->zero_point, new_img->scale, new_img->zero_point);
+                temp = temp * new_img->scale / (input_image->img[0]->scale * curr_kernel->scale) + new_img->zero_point;
                 temp = handle_overflow(temp, vwidth_max);
                 put_main_value(img_data, j * new_img->height + i, vwidth_max, temp);
             }
