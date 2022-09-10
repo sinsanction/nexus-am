@@ -15,10 +15,10 @@ extern "C" {
 #define REPEAT  1
 
 //                  size |  heap  |  checksum
-#define CONV_16 {     100, 512 KB,  0x00000001}
-#define CONV_8  {     100, 256 KB,  0x00000002}
-#define CONV_4  {     100, 256 KB,  0x00000003}
-#define CONV_2  {     100, 256 KB,  0x00000004}
+#define CONV_16 {     100,   2 MB,  0x00000001}
+#define CONV_8  {     100,   1 MB,  0x00000002}
+#define CONV_4  {     100,   1 MB,  0x00000003}
+#define CONV_2  {     100,   1 MB,  0x00000004}
 
 #define POOL_16 {     100, 512 KB,  0x00000011}
 #define POOL_8  {     100, 256 KB,  0x00000012}
@@ -31,10 +31,10 @@ extern "C" {
 #define ACT_2   {     100, 256 KB,  0x00000024}
 
 //base
-#define CONV_16_BASE {     100, 256 KB,  0x00010001}
-#define CONV_8_BASE  {     100, 256 KB,  0x00010002}
-#define CONV_4_BASE  {     100, 128 KB,  0x00010003}
-#define CONV_2_BASE  {     100, 128 KB,  0x00010004}
+#define CONV_16_BASE {     100,   1 MB,  0x00010001}
+#define CONV_8_BASE  {     100,   1 MB,  0x00010002}
+#define CONV_4_BASE  {     100, 512 KB,  0x00010003}
+#define CONV_2_BASE  {     100, 512 KB,  0x00010004}
 
 #define POOL_16_BASE {     100, 256 KB,  0x00010011}
 #define POOL_8_BASE  {     100, 256 KB,  0x00010012}
@@ -47,10 +47,10 @@ extern "C" {
 #define ACT_2_BASE   {     100, 128 KB,  0x00010024}
 
 //perf
-#define CONV_16_PERF {     100, 256 KB,  0x00020001}
-#define CONV_8_PERF  {     100, 256 KB,  0x00020002}
-#define CONV_4_PERF  {     100, 128 KB,  0x00020003}
-#define CONV_2_PERF  {     100, 128 KB,  0x00020004}
+#define CONV_16_PERF {     100,   1 MB,  0x00020001}
+#define CONV_8_PERF  {     100,   1 MB,  0x00020002}
+#define CONV_4_PERF  {     100, 512 KB,  0x00020003}
+#define CONV_2_PERF  {     100, 512 KB,  0x00020004}
 
 #define POOL_16_PERF {     100, 256 KB,  0x00020011}
 #define POOL_8_PERF  {     100, 256 KB,  0x00020012}

@@ -33,13 +33,13 @@ void bench_conv8_perf_prepare() {
 void bench_conv8_perf_run() {
   int k;              //kernel size
   int m;              //output size
-  uint8_t *B;         //cnn output
+  int32_t *B;         //cnn output
   int8_t *kernel;     //kernel
   int k_size;
 
   k = 5;
   m = (N - k) / S + 1;
-  B = (uint8_t *)bench_alloc(sizeof(uint8_t) * m * m);
+  B = (int32_t *)bench_alloc(sizeof(int32_t) * m * m);
   k_size = round_up_div(k * k, 2);
   kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k_size);
 

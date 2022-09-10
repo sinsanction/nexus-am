@@ -13,7 +13,7 @@ void bench_conv16_perf_prepare() {
   vwidth = 0x8888888888888888;
   for (int i=0; i<N; i++) {
     for (int j=0; j<N; j++) {
-      A[i][j] = bench_rand() & 0xff;
+      A[i][j] = bench_rand() & 0xffff;
     }
   }
   test_pass = 1;
@@ -22,12 +22,12 @@ void bench_conv16_perf_prepare() {
 void bench_conv16_perf_run() {
   int k;              //kernel size
   int m;              //output size
-  uint16_t *B;        //cnn output
+  int32_t *B;        //cnn output
   int8_t *kernel;     //kernel
 
   k = 5;
   m = (N - k) / S + 1;
-  B = (uint16_t *)bench_alloc(sizeof(uint16_t) * m * m);
+  B = (int32_t *)bench_alloc(sizeof(int32_t) * m * m);
   kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k * k);
 
   for (int i=0; i<k*k; i++) {

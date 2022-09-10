@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#define N_SIZE 20
+
 inline void LoadV_Width(uint64_t addr) {
   register uint64_t addr_reg asm ("a0") = addr;
   __asm__ volatile(
@@ -337,8 +339,8 @@ inline void LoadV_P(uint64_t addr, uint8_t k, uint8_t vtag) {
   }
 }
 
-inline uint16_t Conv(uint8_t k) {
-  register uint16_t res asm ("a0");
+inline int32_t Conv(uint8_t k) {
+  register int32_t res asm ("a0");
   switch (k) {
     case 1: {
       __asm__ volatile(

@@ -13,7 +13,7 @@ void bench_conv16_prepare() {
   vwidth = 0x8888888888888888;
   for (int i=0; i<N; i++) {
     for (int j=0; j<N; j++) {
-      A[i][j] = bench_rand() & 0xff;
+      A[i][j] = bench_rand() & 0xffff;
     }
   }
   test_pass = 1;
@@ -22,15 +22,15 @@ void bench_conv16_prepare() {
 void bench_conv16_run() {
   int k;              //kernel size
   int m;              //output size
-  uint16_t *B;        //cnn output
-  uint16_t *C;        //std output
+  int32_t *B;        //cnn output
+  int32_t *C;        //std output
   int8_t *kernel;     //kernel
   int pass;
   
   for (k=1; k<=5; k++) {
     m = (N - k) / S + 1;
-    B = (uint16_t *)bench_alloc(sizeof(uint16_t) * m * m);
-    C = (uint16_t *)bench_alloc(sizeof(uint16_t) * m * m);
+    B = (int32_t *)bench_alloc(sizeof(int32_t) * m * m);
+    C = (int32_t *)bench_alloc(sizeof(int32_t) * m * m);
     kernel = (int8_t *)bench_alloc(sizeof(int8_t) * k * k);
     pass = 1;
 
@@ -74,7 +74,7 @@ void bench_conv16_run() {
           tmp_res += A[0 + sj][i + si] * kernel[si * k + sj];
         }
       }
-      C[0 * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xffff) ? 0xffff : tmp_res;
+      C[0 * m + i] = tmp_res;//(tmp_res < 0) ? 0 : (tmp_res > 0xffff) ? 0xffff : tmp_res;
 
       if (B[0 * m + i] != C[0 * m + i]) {
         printf("  conv error: i=%d, j=0, conv_res=%d, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], C[0 * m + i], tmp_res);
@@ -87,7 +87,7 @@ void bench_conv16_run() {
         pass = 0;
       }
       else {
-        ;//printf("  ok: i=%d, j=0, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], tmp_res);
+        printf("  ok: i=%d, j=0, std_res=%d, tmp_res=%d\n", i, B[0 * m + i], C[0 * m + i]);
       }
 
       for (int j=1; j<m; j++) {
@@ -101,7 +101,7 @@ void bench_conv16_run() {
             tmp_res += A[j + sj][i + si] * kernel[si * k + sj];
           }
         }
-        C[j * m + i] = (tmp_res < 0) ? 0 : (tmp_res > 0xffff) ? 0xffff : tmp_res;
+        C[j * m + i] = tmp_res;//(tmp_res < 0) ? 0 : (tmp_res > 0xffff) ? 0xffff : tmp_res;
 
         if (B[j * m + i] != C[j * m + i]) {
           printf("  conv error: i=%d, j=%d, conv_res=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], C[j * m + i], tmp_res);
@@ -114,7 +114,7 @@ void bench_conv16_run() {
           pass = 0;
         }
         else {
-          ;//printf("  ok: i=%d, j=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], tmp_res);
+          printf("  ok: i=%d, j=%d, std_res=%d, tmp_res=%d\n", i, j, B[j * m + i], C[j * m + i]);
         }
 
         col_ptr += N;
