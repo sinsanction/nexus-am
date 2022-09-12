@@ -97,7 +97,7 @@ void bench_lenet5_real_perf_prepare() {
   fc3_out_scale.zero_point = 12 + 128;
 }
 
-void lenet5() {
+static void lenet5() {
   // input
   Rescale(input, &input_out_scale);
 
@@ -145,9 +145,9 @@ void lenet5() {
   free(fc2);
 }
 
-int right_num[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static int right_num[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-void output_res(int num) {
+static void output_res(int num) {
   int max_value = 0;
   for (int i=0; i<output->height; i++) {
     uint16_t res_value = get_main_value((uint64_t *)(output->addr), i, output->vwidth);
