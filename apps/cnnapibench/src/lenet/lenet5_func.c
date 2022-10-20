@@ -3,6 +3,9 @@
 #include "cnnapi_common.h"
 #include "cnnapi_stdins.h"
 
+#define IMG_BITS 2
+#define KER_BITS ((IMG_BITS) / 2)
+
 static image_mc_t *input;
 static kernel_mc_t *c1_ker;
 static kernel_mc_t *c3_ker;
@@ -24,9 +27,9 @@ void bench_lenet5_prepare() {
   test_pass = 1;
 
   // input 32x32x1
-  input = RandomInitImage(32, 32, 8, 1);
+  input = RandomInitImage(32, 32, IMG_BITS, 1);
   //kernel size = 5*5  strides = 1  num = 6
-  c1_ker = RandomInitKernel(5, 4, 1, 6);
+  c1_ker = RandomInitKernel(5, KER_BITS, 1, 6);
   c1_out_scale.channel = 6;
   c1_out_scale.scale = (out_scale_t *)malloc(sizeof(out_scale_t) * 6);
   for (int i=0; i<6; i++) {
@@ -34,7 +37,7 @@ void bench_lenet5_prepare() {
     c1_out_scale.scale[i].zero_point = 0;
   }
   //kernel size = 5*5  strides = 1  num = 16
-  c3_ker = RandomInitKernel(5, 4, 6, 16);
+  c3_ker = RandomInitKernel(5, KER_BITS, 6, 16);
   c3_out_scale.channel = 16;
   c3_out_scale.scale = (out_scale_t *)malloc(sizeof(out_scale_t) * 16);
   for (int i=0; i<16; i++) {
@@ -42,13 +45,13 @@ void bench_lenet5_prepare() {
     c3_out_scale.scale[i].zero_point = 0;
   }
 
-  fc_filter1 = RandomInitFcFilterArray(1, 400, 4, 120);
+  fc_filter1 = RandomInitFcFilterArray(1, 400, KER_BITS, 120);
   fc1_out_scale.scale = input->img[0]->scale / 10;
   fc1_out_scale.zero_point = 0;
-  fc_filter2 = RandomInitFcFilterArray(1, 120, 4, 84);
+  fc_filter2 = RandomInitFcFilterArray(1, 120, KER_BITS, 84);
   fc2_out_scale.scale = input->img[0]->scale / 16;
   fc2_out_scale.zero_point = 0;
-  fc_filter_out = RandomInitFcFilterArray(1, 84, 4, 10);
+  fc_filter_out = RandomInitFcFilterArray(1, 84, KER_BITS, 10);
   fc3_out_scale.scale = input->img[0]->scale / 20;
   fc3_out_scale.zero_point = 0;
 }
@@ -125,8 +128,8 @@ int bench_lenet5_validate() {
     printf("end: fail\n");
     SetOutput(input);
   }
-  bench_free(input);
-  bench_free(output);
-  bench_free(output_std);
+  free(input);
+  free(output);
+  free(output_std);
   return (setting->checksum == 0x00030001) && test_pass;
 }
