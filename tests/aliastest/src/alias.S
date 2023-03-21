@@ -2,8 +2,8 @@
 
 #define TESTNUM gp
 
-.global do_init
-do_init:
+.global do_alias_init
+do_alias_init:
 
   la t0, 1f;
   csrw mtvec, t0;
