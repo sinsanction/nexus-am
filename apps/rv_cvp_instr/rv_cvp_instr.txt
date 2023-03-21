@@ -1,0 +1,54 @@
+conv: src_reg=a0, ker_reg=a1, dst_reg=a2: 
+  sew=00 : 0x00b5060b
+  sew=01 : 0x02b5060b
+  sew=02 : 0x04b5060b
+  sew=03 : 0x06b5060b
+
+pool.max: src_reg=a0, dst_reg=a1: 
+  sew=00 : 0x0015258b
+  sew=01 : 0x0215258b
+  sew=02 : 0x0415258b
+  sew=03 : 0x0615258b
+
+pool.avg: src_reg=a0, dst_reg=a1: 
+  sew=00 : 0x0025258b
+  sew=01 : 0x0225258b
+  sew=02 : 0x0425258b
+  sew=03 : 0x0625258b
+
+pool.m.max: src_reg=a0, dst_reg=a1: 
+  sew=00 : 0x2015358b
+  sew=01 : 0x2215358b
+  sew=02 : 0x2415358b
+  sew=03 : 0x2615358b
+
+pool.m.avg: src_reg=a0, dst_reg=a1: 
+  sew=00 : 0x2025358b
+  sew=01 : 0x2225358b
+  sew=02 : 0x2425358b
+  sew=03 : 0x2625358b
+
+act.relu: src_reg=a0, zero_reg=a1, dst_reg=a2: 
+  sew=00 : 0x00b5460b
+  sew=01 : 0x02b5460b
+  sew=02 : 0x04b5460b
+  sew=03 : 0x06b5460b
+
+act.relu6: src_reg=a0, zero_reg=a1, dst_reg=a2: 
+  sew=00 : 0x10b5460b
+  sew=01 : 0x12b5460b
+  sew=02 : 0x14b5460b
+  sew=03 : 0x16b5460b
+
+add.n: src_a_reg=a0, src_b_reg=a1, dst_reg=a2: 
+  sew=00 : 0x00b5560b
+  sew=01 : 0x02b5560b
+  sew=02 : 0x04b5560b
+  sew=03 : 0x06b5560b
+
+add.relu: src_a_reg=a0, src_b_reg=a1, dst_reg=a2: 
+  sew=00 : 0x10b5560b
+  sew=01 : 0x12b5560b
+  sew=02 : 0x14b5560b
+  sew=03 : 0x16b5560b
+
