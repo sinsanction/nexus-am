@@ -18,12 +18,7 @@ static int single_num;
 inline int RoundUpDiv(int a, int b) {
   int div = a / b;
   int rem = a % b;
-  if (rem == 0) {
-    return div;
-  }
-  else {
-    return div + 1;
-  }
+  return (rem == 0) ? div : div + 1;
 }
 
 void bench_conv16_prepare() {
@@ -36,8 +31,11 @@ void bench_conv16_prepare() {
   C = (int32_t *)bench_alloc(sizeof(int32_t) * OUT_WIDTH * OUT_HEIGHT);
   for (int i=0; i < OUT_WIDTH * OUT_HEIGHT; i++) {
     for (int j=0; j < 4 * single_num; j++) {
-      if (j < CHANNEL * KERNEL_SIZE * KERNEL_SIZE)
-        A[i*single_num*4 + j] = bench_rand() & 0xffff;
+      if (j < CHANNEL * KERNEL_SIZE * KERNEL_SIZE) {
+        int rand = bench_rand();
+        int sign = bench_rand() % 2;
+        A[i*single_num*4 + j] = sign ? rand | 0x8000 : rand;
+      }
       else
         A[i*single_num*4 + j] = 0;
     }
@@ -45,8 +43,11 @@ void bench_conv16_prepare() {
 
   kernel = (int16_t *)bench_alloc(sizeof(int16_t) * CHANNEL * KERNEL_SIZE * KERNEL_SIZE);
   for (int j=0; j < 4 * single_num; j++) {
-    if (j < CHANNEL * KERNEL_SIZE * KERNEL_SIZE)
-      kernel[j] = bench_rand() & 0xffff;
+    if (j < CHANNEL * KERNEL_SIZE * KERNEL_SIZE) {
+      int rand = bench_rand();
+      int sign = bench_rand() % 2;
+      kernel[j] = sign ? rand | 0x8000 : rand;
+    }
     else
       kernel[j] = 0;
   }
@@ -56,6 +57,9 @@ void bench_conv16_prepare() {
 
 void bench_conv16_run() {
   int pass = 1;
+  uint64_t *img_addr = (uint64_t *)A;
+  uint64_t *ker_addr = (uint64_t *)kernel;
+
   printf("\nk=%d begin: \n", KERNEL_SIZE);
   for (int i=0; i < CHANNEL * KERNEL_SIZE * KERNEL_SIZE; i++) {
     printf("  %d", kernel[i]);
@@ -64,8 +68,9 @@ void bench_conv16_run() {
 
   for (int i=0; i < OUT_WIDTH * OUT_HEIGHT; i++) {
     int temp = 0;
+    ker_addr = (uint64_t *)kernel;
     for (int j=0; j < single_num; j++) {
-      temp = Conv((uint64_t)&A[(i*single_num + j)*4], (uint64_t)&kernel[j*4], temp, SEW);
+      temp = Conv(*(img_addr++), *(ker_addr++), temp, SEW);
     }
     B[i] = temp;
 
@@ -84,7 +89,7 @@ void bench_conv16_run() {
       pass = 0;
     }
     else {
-      printf("  ok: i=%d, tmp_res=%d\n", i, B[i]);
+      ;//printf("  ok: i=%d, tmp_res=%d\n", i, B[i]);
     }
   }
 
