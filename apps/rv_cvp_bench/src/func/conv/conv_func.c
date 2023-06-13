@@ -41,7 +41,7 @@ void bench_conv16_prepare() {
     }
   }
 
-  kernel = (int16_t *)bench_alloc(sizeof(int16_t) * CHANNEL * KERNEL_SIZE * KERNEL_SIZE);
+  kernel = (int16_t *)bench_alloc(sizeof(int64_t) * single_num);
   for (int j=0; j < 4 * single_num; j++) {
     if (j < CHANNEL * KERNEL_SIZE * KERNEL_SIZE) {
       int rand = bench_rand();
@@ -61,7 +61,7 @@ void bench_conv16_run() {
   uint64_t *ker_addr = (uint64_t *)kernel;
 
   printf("\nk=%d begin: \n", KERNEL_SIZE);
-  for (int i=0; i < CHANNEL * KERNEL_SIZE * KERNEL_SIZE; i++) {
+  for (int i=0; i < 4 * single_num; i++) {
     printf("  %d", kernel[i]);
   }
   printf("\n");
@@ -71,6 +71,7 @@ void bench_conv16_run() {
     ker_addr = (uint64_t *)kernel;
     for (int j=0; j < single_num; j++) {
       temp = Conv(*(img_addr++), *(ker_addr++), temp, SEW);
+      //printf("    :j=%d, tmp=%d\n", j, temp);
     }
     B[i] = temp;
 
@@ -82,7 +83,7 @@ void bench_conv16_run() {
 
     if (B[i] != C[i]) {
       printf("  conv error: i=%d, conv_res=%d, std_res=%d, std_res=%d, tmp_res=%d\n", i, B[i], C[ i], temp, temp_std);
-      for (int si=0; si < CHANNEL * KERNEL_SIZE * KERNEL_SIZE; si++) {
+      for (int si=0; si < 4 * single_num; si++) {
         printf("  %d", A[i*single_num*4 + si]);
       }
       printf("\n");
