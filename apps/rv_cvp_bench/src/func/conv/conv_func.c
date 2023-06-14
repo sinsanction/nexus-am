@@ -1,110 +1,120 @@
 #include <benchmark.h>
 #include "cvpinst.h"
+#include "utils.h"
 
-#define WIDTH 28
-#define HEIGHT 28
+#define N_SIZE 20
 #define CHANNEL 5
 #define KERNEL_SIZE 3
 #define STRIDE 1
-#define OUT_WIDTH ((WIDTH - KERNEL_SIZE) / STRIDE + 1)
-#define OUT_HEIGHT ((HEIGHT - KERNEL_SIZE) / STRIDE + 1)
-#define SEW 0x3
 
-static int16_t *A, *kernel;
+static uint64_t *A, *kernel;
 static int32_t *B, *C;
 static int test_pass;
-static int single_num;
-
-inline int RoundUpDiv(int a, int b) {
-  int div = a / b;
-  int rem = a % b;
-  return (rem == 0) ? div : div + 1;
-}
+static int elem_bits[4] = {2, 4, 8, 16};
 
 void bench_conv16_prepare() {
-  single_num = RoundUpDiv(CHANNEL * KERNEL_SIZE * KERNEL_SIZE * (1 << (SEW + 1)), 64);
-  printf("\nsingle_num=%d: \n", single_num);
   bench_srand(1);
-
-  A = (int16_t *)bench_alloc(sizeof(int64_t) * single_num * OUT_WIDTH * OUT_HEIGHT);
-  B = (int32_t *)bench_alloc(sizeof(int32_t) * OUT_WIDTH * OUT_HEIGHT);
-  C = (int32_t *)bench_alloc(sizeof(int32_t) * OUT_WIDTH * OUT_HEIGHT);
-  for (int i=0; i < OUT_WIDTH * OUT_HEIGHT; i++) {
-    for (int j=0; j < 4 * single_num; j++) {
-      if (j < CHANNEL * KERNEL_SIZE * KERNEL_SIZE) {
-        int rand = bench_rand();
-        int sign = bench_rand() % 2;
-        A[i*single_num*4 + j] = sign ? rand | 0x8000 : rand;
-      }
-      else
-        A[i*single_num*4 + j] = 0;
-    }
-  }
-
-  kernel = (int16_t *)bench_alloc(sizeof(int64_t) * single_num);
-  for (int j=0; j < 4 * single_num; j++) {
-    if (j < CHANNEL * KERNEL_SIZE * KERNEL_SIZE) {
-      int rand = bench_rand();
-      int sign = bench_rand() % 2;
-      kernel[j] = sign ? rand | 0x8000 : rand;
-    }
-    else
-      kernel[j] = 0;
-  }
-
   test_pass = 1;
 }
 
 void bench_conv16_run() {
-  int pass = 1;
-  uint64_t *img_addr = (uint64_t *)A;
-  uint64_t *ker_addr = (uint64_t *)kernel;
+  int pass;
+  int reg_per_line, elem_per_reg, elem_per_line;
+  int out_size;
+  uint8_t sew;
 
-  printf("\nk=%d begin: \n", KERNEL_SIZE);
-  for (int i=0; i < 4 * single_num; i++) {
-    printf("  %d", kernel[i]);
-  }
-  printf("\n");
+  for(sew=0; sew<=3; sew++) {
+    out_size = (N_SIZE - KERNEL_SIZE) / STRIDE + 1;
+    reg_per_line = RoundUpDiv(CHANNEL * KERNEL_SIZE * KERNEL_SIZE * elem_bits[sew], 64);
+    elem_per_reg = 64 / elem_bits[sew];
+    elem_per_line = CHANNEL * KERNEL_SIZE * KERNEL_SIZE;
+    printf("\nsew=%d begin: reg_per_line=%d, elem_per_reg=%d, elem_per_line=%d, out_size=%d\n", sew, reg_per_line, elem_per_reg, elem_per_line, out_size);
 
-  for (int i=0; i < OUT_WIDTH * OUT_HEIGHT; i++) {
-    int temp = 0;
-    ker_addr = (uint64_t *)kernel;
-    for (int j=0; j < single_num; j++) {
-      temp = Conv(*(img_addr++), *(ker_addr++), temp, SEW);
-      //printf("    :j=%d, tmp=%d\n", j, temp);
-    }
-    B[i] = temp;
+    A = (uint64_t *)bench_alloc(sizeof(uint64_t) * reg_per_line * out_size * out_size);
+    kernel = (uint64_t *)bench_alloc(sizeof(uint64_t) * reg_per_line);
+    B = (int32_t *)bench_alloc(sizeof(int32_t) * out_size * out_size);
+    C = (int32_t *)bench_alloc(sizeof(int32_t) * out_size * out_size);
 
-    int temp_std = 0;
-    for (int j=0; j < CHANNEL * KERNEL_SIZE * KERNEL_SIZE; j++) {
-      temp_std += A[i*single_num*4 + j] * kernel[j];
-    }
-    C[i] = temp_std;
-
-    if (B[i] != C[i]) {
-      printf("  conv error: i=%d, conv_res=%d, std_res=%d, std_res=%d, tmp_res=%d\n", i, B[i], C[ i], temp, temp_std);
-      for (int si=0; si < 4 * single_num; si++) {
-        printf("  %d", A[i*single_num*4 + si]);
+    printf(" init A ...\n");
+    int16_t *addr_a = (int16_t *)A;
+    for (int i=0; i < out_size * out_size; i++) {
+      for (int j=0; j < 4 * reg_per_line; j++) {
+        if (j < elem_per_line) {
+          int rand = bench_rand();
+          *addr_a = (bench_rand() % 2) ? -rand : rand;
+        }
+        else {
+          *addr_a = 0;
+        }
+        addr_a++;
       }
-      printf("\n");
-      pass = 0;
+      if (i % 50 == 0)
+        printf("  %d/%d \t", i, out_size * out_size);
+    }
+
+    printf(" init kernel ...\n");
+    int16_t *addr_ker = (int16_t *)kernel;
+    for (int i=0; i < 4 * reg_per_line; i++) {
+      if (i < elem_per_line) {
+        int rand = bench_rand();
+        addr_ker[i] = (bench_rand() % 2) ? -rand : rand;
+      }
+      else
+        addr_ker[i] = 0;
+    }
+
+    uint64_t *img_addr = (uint64_t *)A;
+    uint64_t *ker_addr = (uint64_t *)kernel;
+    pass = 1;
+
+    for (int i=0; i < reg_per_line * elem_per_reg; i++) {
+      printf("  %d", GetRawData(kernel, i, sew));
+    }
+    printf(" kernel end\n");
+
+    int temp, temp_std;
+    for (int i=0; i < out_size * out_size; i++) {
+      ker_addr = (uint64_t *)kernel;
+      temp = 0;
+      for (int j=0; j < reg_per_line; j++) {
+        temp = Conv(*img_addr, *ker_addr, temp, sew);
+        img_addr++;
+        ker_addr++;
+        //printf("   i=%d:j=%d, tmp=%d\n", i, j, temp);
+      }
+      B[i] = temp;
+
+      temp_std = 0;
+      for (int j=0; j < elem_per_line; j++) {
+        temp_std += GetRawData(A, i * reg_per_line * elem_per_reg + j, sew) * GetRawData(kernel, j, sew);
+      }
+      C[i] = temp_std;
+
+      if (B[i] != C[i]) {
+        printf("  conv error: i=%d, conv_res=%d, std_res=%d\n", i, temp, temp_std);
+        for (int si=0; si < reg_per_line * elem_per_reg; si++) {
+          printf("  %d", GetRawData(A, i * reg_per_line * elem_per_reg + si, sew));
+        }
+        printf("\n");
+        pass = 0;
+      }
+      else {
+        ;//printf("  ok: i=%d, tmp_res=%d\n", i, temp);
+      }
+    }
+
+    if (pass == 1) {
+      printf("sew=%d end: pass!!!\n", sew);
     }
     else {
-      ;//printf("  ok: i=%d, tmp_res=%d\n", i, B[i]);
+      printf("sew=%d end: fail\n", sew);
+      test_pass = 0;
     }
+    bench_free(A);
+    bench_free(B);
+    bench_free(C);
+    bench_free(kernel);
   }
-
-  if (pass == 1) {
-    printf("k=%d end: pass!!!\n", KERNEL_SIZE);
-  }
-  else {
-    printf("k=%d end: fail\n", KERNEL_SIZE);
-    test_pass = 0;
-  }
-  bench_free(A);
-  bench_free(B);
-  bench_free(C);
-  bench_free(kernel);
 }
 
 int bench_conv16_validate() {
