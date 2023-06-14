@@ -15,23 +15,13 @@ extern "C" {
 #define REPEAT  1
 
 //                  size |  heap  |  checksum
-#define CONV_16 {     100,   2 MB,  0x00000001}
-#define CONV_8  {     100,   1 MB,  0x00000002}
-#define CONV_4  {     100,   1 MB,  0x00000003}
-#define CONV_2  {     100,   1 MB,  0x00000004}
-
-#define POOL_16 {     100, 512 KB,  0x00000011}
-#define POOL_8  {     100, 256 KB,  0x00000012}
-#define POOL_4  {     100, 256 KB,  0x00000013}
-#define POOL_2  {     100, 256 KB,  0x00000014}
-
-#define ACT_16  {     100, 256 KB,  0x00000021}
-#define ACT_8   {     100, 256 KB,  0x00000022}
-#define ACT_4   {     100, 256 KB,  0x00000023}
-#define ACT_2   {     100, 256 KB,  0x00000024}
+#define CONV    {     100,   2 MB,  0x00000001}
+#define POOL    {     100,   2 MB,  0x00000011}
+#define ACT     {     100,   1 MB,  0x00000021}
 
 #define BENCHMARK_LIST(def) \
-  def(conv16, "conv16", CONV_16, "CNN Conv 16b")
+  def(conv, "conv", CONV, "CNN Conv") \
+  def(pool, "pool", POOL, "CNN Pool")
 
 // Each benchmark will run REPEAT times
 
