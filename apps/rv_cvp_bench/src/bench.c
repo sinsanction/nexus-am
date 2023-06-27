@@ -69,7 +69,7 @@ int main(const char *args) {
 
   _ioe_init();
 
-  printf("======= Running CNNMicroBench [input *%s* id:%d] =======\n", setting_name, setting_id);
+  printf("======= Running RVCVPMicroBench [input *%s* id:%d] =======\n", setting_name, setting_id);
 
   int pass = 1;
   uint32_t t0 = uptime();

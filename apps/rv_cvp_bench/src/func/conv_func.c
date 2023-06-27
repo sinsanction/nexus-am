@@ -23,7 +23,7 @@ void bench_conv_run() {
   int out_size;
   uint8_t sew;
 
-  for(sew=3; sew<=3; sew++) {
+  for(sew=0; sew<=3; sew++) {
     out_size = (N_SIZE - KERNEL_SIZE) / STRIDE + 1;
     reg_per_line = RoundUpDiv(CHANNEL * KERNEL_SIZE * KERNEL_SIZE * elem_bits[sew], 64);
     elem_per_reg = 64 / elem_bits[sew];
