@@ -43,8 +43,8 @@ void bench_act_run() {
     else if (sew == 1) { q6 = bench_rand() % 16 ; zp = bench_rand() % (q6 + 1); q6 -= 8; zp -= 8; }
     else if (sew == 2) { q6 = bench_rand() % 256; zp = bench_rand() % (q6 + 1); q6 -= 128; zp -= 128; }
     else { q6 = bench_rand() % 65536; zp = bench_rand() % (q6 + 1); q6 -= 32768; zp -= 32768; }
-    zp_reg = ((int16_t)q6 << 16) | (int16_t)zp;
-    printf(" zp: %d, q6: %d, zp_reg: %ld\n", zp, q6, zp_reg);
+    zp_reg = ((q6 & 0xffff) << 16) | (zp & 0xffff);
+    printf("\n zp: %d, q6: %d, zp_reg: %#lx\n", zp, q6, zp_reg);
 
     uint64_t temp, temp_std;
 
@@ -57,7 +57,7 @@ void bench_act_run() {
 
       temp_std = 0;
       for (int j=0; j < elem_per_reg; j++) {
-        temp_std |= (max(GetRawData(A, i * elem_per_reg + j, sew), zp) & elem_width[sew]) << (j * elem_bits[sew]);
+        temp_std |= ((uint64_t)max(GetRawData(A, i * elem_per_reg + j, sew), zp) & elem_width[sew]) << (j * elem_bits[sew]);
       }
       C[i] = temp_std;
 
@@ -83,7 +83,7 @@ void bench_act_run() {
 
       temp_std = 0;
       for (int j=0; j < elem_per_reg; j++) {
-        temp_std |= (min(max(GetRawData(C, i * elem_per_reg + j, sew), zp), q6) & elem_width[sew]) << (j * elem_bits[sew]);
+        temp_std |= ((uint64_t)min(max(GetRawData(C, i * elem_per_reg + j, sew), zp), q6) & elem_width[sew]) << (j * elem_bits[sew]);
       }
       C[i] = temp_std;
 

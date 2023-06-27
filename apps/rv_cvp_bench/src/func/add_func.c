@@ -54,8 +54,8 @@ void bench_add_run() {
     else if (sew == 1) zp = rand() % 16 - 8;
     else if (sew == 2) zp = rand() % 256 - 128;
     else zp = rand() % 65536 - 32768;
-    zp_reg = zp;
-    printf(" zp: %d, zp_reg: %ld\n", zp, zp_reg);
+    zp_reg = zp & 0xffff;
+    printf("\n zp: %d, zp_reg: %#lx\n", zp, zp_reg);
 
     uint64_t temp, temp_std;
 
@@ -70,7 +70,7 @@ void bench_add_run() {
       for (int j=0; j < elem_per_reg; j++) {
         int tmp_sum = GetRawData(A1, i * elem_per_reg + j, sew) + GetRawData(A2, i * elem_per_reg + j, sew) - zp;
         tmp_sum = min(max(tmp_sum, elem_min[sew]), elem_max[sew]);
-        temp_std |= (tmp_sum & elem_width[sew]) << (j * elem_bits[sew]);
+        temp_std |= (uint64_t)(tmp_sum & elem_width[sew]) << (j * elem_bits[sew]);
       }
       C[i] = temp_std;
 
@@ -102,7 +102,7 @@ void bench_add_run() {
       for (int j=0; j < elem_per_reg; j++) {
         int tmp_sum = GetRawData(A1, i * elem_per_reg + j, sew) + GetRawData(A2, i * elem_per_reg + j, sew) - zp;
         tmp_sum = min(max(tmp_sum, zp), elem_max[sew]);
-        temp_std |= (tmp_sum & elem_width[sew]) << (j * elem_bits[sew]);
+        temp_std |= (uint64_t)(tmp_sum & elem_width[sew]) << (j * elem_bits[sew]);
       }
       C[i] = temp_std;
 

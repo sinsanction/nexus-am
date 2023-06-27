@@ -97,10 +97,10 @@ inline int RoundUpDiv(int a, int b) {
   return (rem == 0) ? div : div + 1;
 }
 
-inline int16_t max(int16_t a, int16_t b) {
+inline int max(int a, int b) {
   return (a >= b) ? a : b;
 }
 
-inline int16_t min(int16_t a, int16_t b) {
+inline int min(int a, int b) {
   return (a <= b) ? a : b;
 }

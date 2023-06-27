@@ -20,8 +20,8 @@ void PutRawData(uint64_t *addr, int i, uint8_t sew, int16_t value);
 
 // others
 int RoundUpDiv(int a, int b);
-int16_t max(int16_t a, int16_t b);
-int16_t min(int16_t a, int16_t b);
+int max(int a, int b);
+int min(int a, int b);
 
 #ifdef __cplusplus
 }
