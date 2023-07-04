@@ -88,7 +88,7 @@ void bench_act_run() {
       C[i] = temp_std;
 
       if (B[i] != C[i]) {
-        printf("  act.relu error: i=%d, act_res=%#lx, std_res=%#lx\n", i, temp, temp_std);
+        printf("  act.relu6 error: i=%d, act_res=%#lx, std_res=%#lx\n", i, temp, temp_std);
         for (int si=0; si < elem_per_reg; si++) {
           printf("  %d,", GetRawData(A, i * elem_per_reg + si, sew));
         }

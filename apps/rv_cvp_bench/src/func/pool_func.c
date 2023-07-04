@@ -101,19 +101,19 @@ void bench_pool_run() {
         temp = Pool_Avg(img_addr[j], temp, sew);
         //printf("   i=%d:j=%d, tmp=%d ", i, j, temp);
       }
-      Bm[i] = temp;
+      Ba[i] = temp;
 
       temp_std = 0;
       for (int j=0; j < elem_per_line; j++) {
-        temp_std += GetRawData(Am, i * reg_per_line * elem_per_reg + j, sew);
+        temp_std += GetRawData(Aa, i * reg_per_line * elem_per_reg + j, sew);
         //printf("   i=%d:j=%d, std=%d ", i, j, temp_std);
       }
-      Cm[i] = temp_std;
+      Ca[i] = temp_std;
 
-      if (Bm[i] != Cm[i]) {
+      if (Ba[i] != Ca[i]) {
         printf("  pool.avg error: i=%d, poolavg_res=%d, std_res=%d\n", i, temp, temp_std);
         for (int si=0; si < reg_per_line * elem_per_reg; si++) {
-          printf("  %d,", GetRawData(Am, i * reg_per_line * elem_per_reg + si, sew));
+          printf("  %d,", GetRawData(Aa, i * reg_per_line * elem_per_reg + si, sew));
         }
         printf("\n");
         pass2 = 0;

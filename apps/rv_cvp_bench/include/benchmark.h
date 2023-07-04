@@ -19,12 +19,14 @@ extern "C" {
 #define POOL    {     100,   2 MB,  0x00000011}
 #define ACT     {     100,   1 MB,  0x00000021}
 #define ADD     {     100,   1 MB,  0x00000031}
+#define POOLM   {     100,   2 MB,  0x00000041}
 
 #define BENCHMARK_LIST(def) \
-  def(conv, "conv", CONV, "CNN Conv") \
-  def(pool, "pool", POOL, "CNN Pool") \
-  def(act,  "act",  ACT,  "CNN Act") \
-  def(add,  "add",  ADD,  "CNN Add")
+  def(conv,  "conv",  CONV,  "CNN Conv") \
+  def(pool,  "pool",  POOL,  "CNN Pool") \
+  def(act,   "act",   ACT,   "CNN Act") \
+  def(add,   "add",   ADD,   "CNN Add") \
+  def(poolm, "poolm", POOLM, "CNN PoolM")
 
 // Each benchmark will run REPEAT times
 

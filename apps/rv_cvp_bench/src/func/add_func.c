@@ -91,8 +91,8 @@ void bench_add_run() {
       }
     }
 
-    // add.relu6
-    printf(" add.relu6 begin ...\n");
+    // add.relu
+    printf(" add.relu begin ...\n");
     pass2 = 1;
     for (int i=0; i < reg_num; i++) {
       temp = Add_Relu(A1[i], A2[i], zp_reg, sew);
